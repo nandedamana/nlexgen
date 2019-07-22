@@ -1,4 +1,4 @@
 default:lexgen
 
-lexgen:main.c
-	cc -o lexgen main.c
+lexgen:main.o read.o
+	cc -o lexgen main.o read.o
