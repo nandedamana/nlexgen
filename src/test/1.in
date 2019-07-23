@@ -1,0 +1,2 @@
+hello  { puts("hello!"); }
+hi     { puts("hi!");    }
