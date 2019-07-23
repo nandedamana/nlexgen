@@ -3,7 +3,10 @@
  */
 
 typedef struct _NanTreeNode {
-	int                   data;
+	union {
+	   int                i;
+	   void             * ptr;
+	} data;
 	struct _NanTreeNode * first_child;
 	struct _NanTreeNode * sibling;
 } NanTreeNode;
