@@ -1,5 +1,5 @@
 /* Nandakumar Edamana
- * Started on 2019-07-22
+ * Started on 2019-07-23
  */
 
 #include "read.h"
@@ -23,10 +23,9 @@ int main()
 	int token;
 	char ch;
 
-	do {
+	while( (ch = nan_getchar()) && ch && ch != EOF) {
 		token = NAN_TOK_NONE;
 
-		ch = nan_getchar();
 		#include "out/lexbranch.c"
 		
 		if(token == NAN_TOK_NONE) {
@@ -37,7 +36,7 @@ int main()
 			if(ch == ' ' || ch == '\n' || ch == 0 || ch == EOF) /* Separator */
 				fprintf(fpout, "Token detected: %d\n", token);
 		}
-	} while(ch && ch != EOF);
+	}
 
 	return 0;
 }
