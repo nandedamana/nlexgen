@@ -4,9 +4,10 @@
 
 #include "read.h"
 
-#define NAN_TOK_NONE  0
-#define NAN_TOK_HELLO 1
-#define NAN_TOK_HI    2
+#define NAN_TOK_NONE       0
+#define NAN_TOK_HELLO      1
+#define NAN_TOK_HI         2
+#define	NAN_TOK_SEPARATOR  3
 
 int main()
 {
@@ -23,19 +24,35 @@ int main()
 	int token;
 	char ch;
 
-	while( (ch = nan_getchar()) && ch && ch != EOF) {
+	while(1) {
+		ch = nlex_getchar();
+		
+		if(ch == ' ' || ch == '\n' || ch == 0 || ch == EOF) { /* Separator */
+			if(token != NAN_TOK_NONE)
+					fprintf(fpout, "Token: %d\n", token);
+						
+			if(ch == 0 || ch == EOF) {
+				/* Don't care whether token is set or not */
+				break;
+			}
+			else {
+				if(token == NAN_TOK_NONE) {
+					fprintf(stderr, "ERROR: Unknown token.\n");
+					exit(1);
+				}
+			}
+			
+			/* Put two consecutive spaces in the input and
+			 * you'll know why I wrote this. 
+			 */
+			token = NAN_TOK_SEPARATOR;
+
+			continue;
+		}		
+		
 		token = NAN_TOK_NONE;
 
 		#include "out/lexbranch.c"
-		
-		if(token == NAN_TOK_NONE) {
-			fprintf(stderr, "ERROR: Unknown token.\n");
-			exit(1);
-		}
-		else {
-			if(ch == ' ' || ch == '\n' || ch == 0 || ch == EOF) /* Separator */
-				fprintf(fpout, "Token detected: %d\n", token);
-		}
 	}
 
 	return 0;

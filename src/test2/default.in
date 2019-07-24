@@ -1,0 +1,4 @@
+char   { token = NAN_KW_CHAR;  }
+const  { token = NAN_KW_CONST; }
+/*     { token = NAN_TOK_COMMENT; state = NAN_STATE_COMMENT; }
+"      { token = NAN_TOK_STRING;  state = NAN_STATE_STRING; nlex_start_tokrec(); }

@@ -2,6 +2,8 @@
  * Started on 2019-07-22
  */
 
+#define NLEX_ITSELF 1
+
 #include "read.h"
 #include "tree.h"
 
@@ -34,8 +36,10 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 		indent_level++;
 		indent();
 		indent_level--;
-		
-		fprintf(fpout, "ch = nan_getchar();\n");
+
+		/* Reading will not be done by the leaf nodes. */		
+		if(tptr->first_child->first_child != NULL)
+			fprintf(fpout, "ch = nlex_getchar();\n");
 		
 		nan_tree2code(tptr, indent_level + 1);
 
@@ -52,12 +56,7 @@ int main()
 	fpin  = stdin;
 	fpout = stdout;
 
-	bufptr = buf;
-
-	/* Precalculate for efficient later comparisons.
-	 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
-	*/
-	bufendptr = buf + BUFLEN;
+	nlex_init();
 
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
@@ -65,7 +64,7 @@ int main()
 	char ch;
 
 	/* BEGIN Tree Construction */
-	while( (ch = nan_getchar()) != 0 && ch != EOF) {
+	while( (ch = nlex_getchar()) != 0 && ch != EOF) {
 		if(ch == ' ' || ch == '\t') { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
 			char   * abuf    = NULL;
@@ -83,7 +82,7 @@ int main()
 					abuflen += BUFLEN;
 				}
 
-				ch = nan_getchar();
+				ch = nlex_getchar();
 				
 				/* XXX A dirty trick to make sure the buffer ends with nullchar;
 				 * also helps to break the loop easily.
