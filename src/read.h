@@ -18,6 +18,11 @@ extern char         buf[BUFLEN];
 extern char       * bufptr;
 extern const char * bufendptr;
 
+extern char         ch;
+
+extern const char escin [];
+extern const char escout[];
+
 #ifndef NLEX_ITSELF
 /* Features not used by the lexgen itself */
 
@@ -32,6 +37,52 @@ extern char   * tokbuf;
 extern char   * tokbufptr;
 extern char   * tokbufendptr;
 extern size_t   tokbuflen;    /* Actual current buffer length   */
+
+static inline void nlex_tokbuf_append(const char ch) {
+	/* Unlike tokbufptr, tokbufendptr is inside the bound, so that space for
+	 * nullchar is always ensured.
+	 */
+	if(tokbufptr == tokbufendptr) {
+		tokbuflen += TOKBUF_UNIT;
+		tokbuf     = realloc(tokbuf, tokbuflen);
+		if(!tokbuf) { // TODO enable custom error
+			fprintf(stderr, "realloc() error.\n");
+			exit(1);
+		}
+		
+		tokbufendptr = tokbuf + tokbuflen;
+		
+		/* Resetting tokbufptr is a must after realloc() since the buffer might
+		 * have been relocated.
+		 */
+		tokbufptr    = tokbufendptr - TOKBUF_UNIT;
+	}
+
+	*tokbufptr++ = ch;
+}
+
+// TODO enable custom error when nlex_tokbuf_append allows
+static inline void nlex_tokrec()
+{
+	nlex_tokbuf_append(ch);
+}
+
+/* Initialize the token buffer */
+// TODO option to handle err here itself
+static inline int nlex_tokrec_init()
+{
+	tokbuf = calloc(TOKBUF_UNIT, 1); /* calloc() ensures null-termination */
+	if(!tokbuf)
+		return 1;
+
+	tokbufptr = tokbuf;
+	tokbuflen = TOKBUF_UNIT;
+
+	/* Precalculate for efficient comparison */
+	tokbufendptr = tokbuf + TOKBUF_UNIT - 1;
+
+	return 0;
+}
 #endif
 
 // TODO return int for err handling?
@@ -49,35 +100,31 @@ static inline char nlex_getchar()
 			exit(1);
 		}
 	}
-	
-	#ifndef NLEX_ITSELF
-	if(rectok) {
-		/* Unlike tokbufptr, tokbufendptr is inside the bound, so that space for
-		 * nullchar is always ensured.
-		 */
-		if(tokbufptr == tokbufendptr) {
-			tokbuflen += TOKBUF_UNIT;
-			puts("Re");
-			tokbuf     = realloc(tokbuf, tokbuflen);
-			if(!tokbuf) { // TODO enable custom error
-				fprintf(stderr, "realloc() error.\n");
-				exit(1);
-			}
-			
-			tokbufendptr = tokbuf + tokbuflen;
-			
-			/* Resetting tokbufptr is a must after realloc() since the buffer might
-			 * have been relocated.
-			 */
-			tokbufptr    = tokbufendptr - TOKBUF_UNIT;
-		}
 
-		*tokbufptr++ = *bufptr;
-	}
-	#endif
-	
 	/* Now return the character */
 	return *bufptr++;
+}
+
+static inline int nlex_get_escin(char ch)
+{
+	const char *ptr;
+
+	for(ptr = escout; *ptr; ptr++)
+		if(ch == *ptr)
+			return escin[(ptr - escout)];
+
+	return -1;
+}
+
+static inline int nlex_get_escout(char ch)
+{
+	const char *ptr;
+
+	for(ptr = escin; *ptr; ptr++)
+		if(ch == *ptr)
+			return escout[(ptr - escin)];
+
+	return -1;
 }
 
 static inline void nlex_init()
@@ -93,31 +140,5 @@ static inline void nlex_init()
 	rectok = 0;
 	#endif
 }
-
-#ifndef NLEX_ITSELF
-/* Start recording the input */
-// TODO option to handle err here itself
-static inline int nlex_start_tokrec()
-{
-printf("nlex_start_tokrec() while *bufptr = %c\n", *bufptr);
-	rectok = 1;
-	tokbuf = calloc(TOKBUF_UNIT, 1); /* calloc() ensures null-termination */
-	if(!tokbuf)
-		return 1;
-
-	/* Can't wait until the next call to nlex_getchar() or the current char
-	 * will be missed.
-	 */
-	tokbuf[0] = *(bufptr - 1);
-
-	tokbufptr = tokbuf + 1;
-	tokbuflen = TOKBUF_UNIT;
-	
-	/* Precalculate for efficient comparison */
-	tokbufendptr = tokbuf + TOKBUF_UNIT - 1;
-	
-	return 0;
-}
-#endif
 
 #endif

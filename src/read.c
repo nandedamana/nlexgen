@@ -12,7 +12,17 @@ char         buf[BUFLEN];
 char       * bufptr;
 const char * bufendptr;
 
-#ifndef NLEX_ITSELF
+char         ch;
+
+#ifdef NLEX_ITSELF
+/* Includes the escaping of special chars used by the lexgen */
+const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', '#', 0};
+const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', '#', 0};
+
+#else
+const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', 0};
+const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', 0};
+
 /* Features not used by the lexgen itself */
 _Bool    rectok;
 char   * tokbuf;

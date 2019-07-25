@@ -7,7 +7,8 @@
 enum NanState {
 	NAN_STATE_DEFAULT,
 	NAN_STATE_COMMENT,
-	NAN_STATE_STRING
+	NAN_STATE_STRING,
+	NAN_STATE_STR_ESC
 };
 
 /* XXX Idea! 2019-07-04 morning.
@@ -37,7 +38,6 @@ int main()
 	
 	int state = NAN_STATE_DEFAULT;
 	int token;
-	char ch;
 
 	while(1) {
 	 	ch = nlex_getchar();
@@ -76,6 +76,22 @@ int main()
 		else if(state == NAN_STATE_STRING) {
 			#include "out/lexbranch-string.c"
 		}
+		else if(state == NAN_STATE_STR_ESC) {
+			char escoutch = nlex_get_escout(ch);
+			if(escoutch != -1) {
+				nlex_tokbuf_append(escoutch);
+				state = NAN_STATE_STRING;
+			}
+			else {
+				fprintf(stderr, "ERROR: Unknown escape sequence.\n");
+				exit(1);
+			}
+		}
+		
+		/* XXX I cannot check the value of `token` until I encounter a separator.
+		 * Checking here may work, but it'll work for prefixes also
+		 * (e.g.: 'character' confused for 'char').
+		 */
 	}
 
 	return 0;

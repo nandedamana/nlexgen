@@ -30,7 +30,20 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 		if(childcount++ != 0)
 			fprintf(fpout, "else ");
 		
-		fprintf(fpout, "if(ch == '%c') {\n", tptr->data.i);
+		if(tptr->data.i >= 0) {
+			int escin = nlex_get_escin(tptr->data.i);
+			if(escin == -1) /* Not an escape sequence */
+				fprintf(fpout, "if(ch == '%c') {\n", tptr->data.i);
+			else
+				fprintf(fpout, "if(ch == '\\%c') {\n", escin);
+		}
+		else { /* Special cases */
+			switch(tptr->data.i) {
+			case NLEX_CASE_ELSE:
+				fprintf(fpout, "{\n"); /* 'else' has already been printed */
+				break;
+			}
+		}
 		
 		// XXX Calling indent() two times won't be useful if indent_level = 0
 		indent_level++;
@@ -61,7 +74,9 @@ int main()
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
 
-	char ch;
+	int ch;
+
+	_Bool escaped = 0;
 
 	/* BEGIN Tree Construction */
 	while( (ch = nlex_getchar()) != 0 && ch != EOF) {
@@ -108,9 +123,52 @@ int main()
 			continue;
 		}
 		/* TODO can I avoid this [redundant] comparison? */
+		/* XXX `*else* if` is unnecessary since `continue` is used above.
+		 * But this ensures safety in case I change something.
+		 */
 		else if(ch == '\n' || ch == 0 || ch == EOF) {
 			fprintf(stderr, "ERROR: No action given for a token.\n");
 			exit(1);
+		}
+
+		if(escaped) {
+			ch = nlex_get_escout(ch);
+			if(ch != -1) {
+				escaped = 0;
+			}
+			else {
+				fprintf(stderr, "ERROR: Unknown escape sequence.\n");
+				exit(1);
+			}
+		}
+		else {
+			if(ch == '\\') {
+				escaped = 1;
+				continue;
+			}
+			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
+				ch = nlex_getchar();
+				if(ch == 'e') {
+					ch = nlex_getchar();
+					if(ch == 'l') {
+						ch = nlex_getchar();
+						if(ch == 's') {
+							ch = nlex_getchar();
+							if(ch == 'e') {
+								ch = NLEX_CASE_ELSE;
+							}
+						}
+					}
+				}
+				
+				if(ch >= 0 || /* Still a regular character OR */
+					/* the next character is not a separator */
+					!( *bufptr == ' ' || *bufptr == '\t' ) )
+				{ 
+					fprintf(stderr, "ERROR: Unknown or incomplete case specification.\n");
+					exit(1);
+				}
+			}
 		}
 
 		NanTreeNode * tmatching_node = NULL;
