@@ -82,31 +82,18 @@ int main()
 	while( (ch = nlex_getchar()) != 0 && ch != EOF) {
 		if(ch == ' ' || ch == '\t') { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
-			char   * abuf    = NULL;
-			size_t   abuflen = 0;
-			size_t   abufpos = 0;
 			
-			do {
-				if(abufpos == abuflen) {
-					abuf = realloc(abuf, abuflen + BUFLEN);
-					if(!abuf) {
-						fprintf(stderr, "realloc() error.\n");
-						exit(1);
-					}
-				
-					abuflen += BUFLEN;
-				}
-
+			nlex_tokrec_init(); // TODO err
+			while(1) {
 				ch = nlex_getchar();
 				
-				/* XXX A dirty trick to make sure the buffer ends with nullchar;
-				 * also helps to break the loop easily.
-				 */
-				if(ch == '\n' || ch == EOF)
-					ch = 0;
-
-				abuf[abufpos++] = ch;
-			} while(ch);
+				if(ch == '\n' || ch == EOF) {
+					nlex_tokrec_finish();
+					break;
+				}
+				
+				nlex_tokbuf_append(ch);
+			}
 
 			tcurnode->first_child = malloc(sizeof(NanTreeNode));
 			if(!tcurnode->first_child) {
@@ -115,7 +102,7 @@ int main()
 			}
 			
 			/* Nobody cares about first_child or sibling of the new node. */
-			tcurnode->first_child->data.ptr = abuf;
+			tcurnode->first_child->data.ptr = tokbuf;
 			
 			/* Reset the tree pointer */
 			tcurnode = &troot;

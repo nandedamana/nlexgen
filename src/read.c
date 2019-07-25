@@ -14,6 +14,11 @@ const char * bufendptr;
 
 char         ch;
 
+char       * tokbuf;
+char       * tokbufptr;
+char       * tokbufendptr;
+size_t      tokbuflen;
+
 #ifdef NLEX_ITSELF
 /* Includes the escaping of special chars used by the lexgen */
 const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', '#', 0};
@@ -23,10 +28,4 @@ const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', '#', 0};
 const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', 0};
 const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', 0};
 
-/* Features not used by the lexgen itself */
-_Bool    rectok;
-char   * tokbuf;
-char   * tokbufptr;
-char   * tokbufendptr;
-size_t   tokbuflen;
 #endif

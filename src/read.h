@@ -20,70 +20,15 @@ extern const char * bufendptr;
 
 extern char         ch;
 
-extern const char escin [];
-extern const char escout[];
+#define TOKBUF_UNIT 32
 
-#ifndef NLEX_ITSELF
-/* Features not used by the lexgen itself */
-
-/* Unit size of the token buffer (must be greater than 1;
- * see nlex_start_tokrec())
- */
-#define TOKBUF_UNIT 16
-// TODO test 1 and 2
-
-extern _Bool    rectok;       /* Flag to enable token recording */
 extern char   * tokbuf;
 extern char   * tokbufptr;
 extern char   * tokbufendptr;
 extern size_t   tokbuflen;    /* Actual current buffer length   */
 
-static inline void nlex_tokbuf_append(const char ch) {
-	/* Unlike tokbufptr, tokbufendptr is inside the bound, so that space for
-	 * nullchar is always ensured.
-	 */
-	if(tokbufptr == tokbufendptr) {
-		tokbuflen += TOKBUF_UNIT;
-		tokbuf     = realloc(tokbuf, tokbuflen);
-		if(!tokbuf) { // TODO enable custom error
-			fprintf(stderr, "realloc() error.\n");
-			exit(1);
-		}
-		
-		tokbufendptr = tokbuf + tokbuflen;
-		
-		/* Resetting tokbufptr is a must after realloc() since the buffer might
-		 * have been relocated.
-		 */
-		tokbufptr    = tokbufendptr - TOKBUF_UNIT;
-	}
-
-	*tokbufptr++ = ch;
-}
-
-// TODO enable custom error when nlex_tokbuf_append allows
-static inline void nlex_tokrec()
-{
-	nlex_tokbuf_append(ch);
-}
-
-/* Initialize the token buffer */
-// TODO option to handle err here itself
-static inline int nlex_tokrec_init()
-{
-	tokbuf = calloc(TOKBUF_UNIT, 1); /* calloc() ensures null-termination */
-	if(!tokbuf)
-		return 1;
-
-	tokbufptr = tokbuf;
-	tokbuflen = TOKBUF_UNIT;
-
-	/* Precalculate for efficient comparison */
-	tokbufendptr = tokbuf + TOKBUF_UNIT - 1;
-
-	return 0;
-}
-#endif
+extern const char escin [];
+extern const char escout[];
 
 // TODO return int for err handling?
 static inline char nlex_getchar()
@@ -135,10 +80,58 @@ static inline void nlex_init()
 	 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
 	*/
 	bufendptr = buf + BUFLEN;	
-	
-	#ifndef NLEX_ITSELF
-	rectok = 0;
-	#endif
 }
 
+static inline void nlex_tokbuf_append(const char ch) {
+	/* bufendptr is out of bound, so no memory wastage */
+	if(tokbufptr == tokbufendptr) {
+		tokbuflen += TOKBUF_UNIT;
+		tokbuf     = realloc(tokbuf, tokbuflen);
+		if(!tokbuf) { // TODO enable custom error
+			fprintf(stderr, "realloc() error.\n");
+			exit(1);
+		}
+		
+		tokbufendptr = tokbuf + tokbuflen;
+		
+		/* Resetting tokbufptr is a must after realloc() since the buffer might
+		 * have been relocated.
+		 */
+		tokbufptr    = tokbufendptr - TOKBUF_UNIT;
+	}
+
+	*tokbufptr++ = ch;
+}
+
+// TODO enable custom error when nlex_tokbuf_append allows
+static inline void nlex_tokrec()
+{
+	nlex_tokbuf_append(ch);
+}
+
+/* Initialize the token buffer */
+// TODO option to handle err here itself
+static inline int nlex_tokrec_init()
+{
+	/* calloc() may ensure automatic null-termination,
+	 * but later realloc() won't. Hence malloc().
+	 */
+	tokbuf = malloc(TOKBUF_UNIT);
+	if(!tokbuf)
+		return 1;
+
+	tokbufptr = tokbuf;
+	tokbuflen = TOKBUF_UNIT;
+
+	/* Precalculate for efficient comparison */
+	tokbufendptr = tokbuf + TOKBUF_UNIT;
+
+	return 0;
+}
+
+/* Just null-termination; no memory cleanup. */
+static inline int nlex_tokrec_finish()
+{
+	*tokbufptr = '\0';
+}
 #endif

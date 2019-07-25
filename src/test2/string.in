@@ -1,3 +1,3 @@
 \\    { state = NAN_STATE_STR_ESC; }
-"     { state = NAN_STATE_DEFAULT; puts(tokbuf); }
+"     { state = NAN_STATE_DEFAULT; nlex_tokrec_finish(); puts(tokbuf); }
 #else { nlex_tokrec(); }
