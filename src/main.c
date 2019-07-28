@@ -7,8 +7,14 @@
 #include "read.h"
 #include "tree.h"
 
-#define NLEX_CASE_ELSE     -1
-#define NLEX_CASE_SPACETAB -2
+#define NLEX_CASE_ROOT     -1
+#define NLEX_CASE_ELSE     -2
+#define NLEX_CASE_SPACETAB -3
+
+void die(const char *msg) {
+	fprintf(stderr, "ERROR: %s\n", msg);
+	exit(1);
+}
 
 void nan_tree2code(NanTreeNode *root, int indent_level)
 {
@@ -20,16 +26,16 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 	// TODO precreate a padding string
 	#define indent(); for(i = 0; i < indent_level; i++) fputc(' ', fpout);
 
+	if(root->data.i == NLEX_CASE_ELSE) {
+		/* Child is an action node */
+		fprintf(fpout, "%s\n", (char *) root->first_child->data.ptr);
+		return;
+	}
+
 	/* For non-leaf nodes */
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		indent();
 
-		/* For leaf nodes (their immediate parents, actually) */
-		if(tptr->first_child == NULL) {
-			fprintf(fpout, "%s\n", (char *) root->first_child->data.ptr);
-			continue;
-		}
-		
 		if(childcount++ != 0)
 			fprintf(fpout, "else ");
 		
@@ -39,6 +45,12 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 				fprintf(fpout, "if(ch == '%c') {\n", tptr->data.i);
 			else
 				fprintf(fpout, "if(ch == '\\%c') {\n", escin);
+
+			/* First child itself is else means direct action.
+			 * Reading should be done in cases except this.
+			 */
+			if(tptr->first_child->data.i != NLEX_CASE_ELSE)
+				fprintf(fpout, "ch = nlex_getchar();\n");
 		}
 		else { /* Special cases */
 			switch(tptr->data.i) {
@@ -56,10 +68,6 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 		indent();
 		indent_level--;
 
-		/* Reading will not be done by the leaf nodes. */		
-		if(tptr->first_child->first_child != NULL)
-			fprintf(fpout, "ch = nlex_getchar();\n");
-		
 		nan_tree2code(tptr, indent_level + 1);
 
 		indent();
@@ -79,6 +87,7 @@ int main()
 
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
+	troot.data.i      = NLEX_CASE_ROOT;
 
 	int ch;
 
@@ -101,14 +110,29 @@ int main()
 				nlex_tokbuf_append(ch);
 			}
 
+			/* Two nodes have to be created: an else node and an action node. */
+
+			NanTreeNode *enode = malloc(sizeof(NanTreeNode));
+			if(!enode)
+				die("malloc() error.");
+
+			NanTreeNode *anode = malloc(sizeof(NanTreeNode));
+			if(!anode)
+				die("malloc() error.");
+
+			enode->data.i      = NLEX_CASE_ELSE;
+			enode->first_child = anode;
+			enode->sibling     = NULL;
+
 			tcurnode->first_child = malloc(sizeof(NanTreeNode));
-			if(!tcurnode->first_child) {
-				fprintf(stderr, "malloc() error.\n");
-				exit(1);
-			}
+			if(!tcurnode->first_child)
+				die("malloc() error.");
 			
-			/* Nobody cares about first_child or sibling of the new node. */
-			tcurnode->first_child->data.ptr = tokbuf;
+			/* Copy the action. */
+			anode->data.ptr = tokbuf;
+			/* Nobody cares about first_child or sibling of an action node. */
+			
+			tcurnode->first_child = enode;
 			
 			/* Reset the tree pointer */
 			tcurnode = &troot;
@@ -119,20 +143,15 @@ int main()
 		/* XXX `*else* if` is unnecessary since `continue` is used above.
 		 * But this ensures safety in case I change something.
 		 */
-		else if(ch == '\n' || ch == 0 || ch == EOF) {
-			fprintf(stderr, "ERROR: No action given for a token.\n");
-			exit(1);
-		}
+		else if(ch == '\n' || ch == 0 || ch == EOF)
+			die("No action given for a token.");
 
 		if(escaped) {
 			ch = nlex_get_escout(ch);
-			if(ch != -1) {
+			if(ch != -1)
 				escaped = 0;
-			}
-			else {
-				fprintf(stderr, "ERROR: Unknown escape sequence.\n");
-				exit(1);
-			}
+			else
+				die("Unknown escape sequence.");
 		}
 		else {
 			if(ch == '\\') {
@@ -186,8 +205,7 @@ int main()
 					/* the next character is not a separator */
 					!( *bufptr == ' ' || *bufptr == '\t' ) )
 				{ 
-					fprintf(stderr, "ERROR: Unknown or incomplete case specification.\n");
-					exit(1);
+					die("Unknown or incomplete case specification.");
 				}
 			}
 		}
@@ -213,29 +231,51 @@ int main()
 			tcurnode = tmatching_node;
 		}
 		else { /* Create a new node */
-			NanTreeNode * tmp = malloc(sizeof(NanTreeNode));
-			if(!tmp) {
-				fprintf(stderr, "malloc() error.\n");
-				exit(1);
-			}
+			NanTreeNode * newnode = malloc(sizeof(NanTreeNode));
+			if(!newnode)
+				die("malloc() error.");
 			
-			tmp->data.i      = ch;
-			tmp->sibling     = NULL;
-			tmp->first_child = NULL;
+			newnode->data.i      = ch;
+			newnode->sibling     = NULL;
+			newnode->first_child = NULL;
+			
+			/* Possible cases:
+			 * 1) The current node has no children
+			 * 2) The current node has children
+			 * 2.1) The last child is an else node
+			 * 2.2) The last child is a non-else node
+			 */
+
+			/* If the last child is an action node, convert it to an else node.
+			 * If the last child is already an else node, the new character node
+			 * has to be added before it.
+			 */
 			
 			if(tptr_prv == NULL) {
-				/* tcurnode has no children yet */
+				/* Case: tcurnode has no children yet */
 
-				tcurnode->first_child = tmp;
+				tcurnode->first_child = newnode;
+			}
+			else if(tptr_prv->data.i == NLEX_CASE_ELSE) {
+				/* Case: Last child is an else node */
+				/* The insertion has to be made before this node */
+				
+				NanTreeNode ** tptrptr = &(tcurnode->first_child);
+				while((*tptrptr)->sibling == tptr_prv)
+					tptrptr = &((*tptrptr)->sibling);
+				
+				/* Now tptrptr is a pointer to the pointer to the else node. */
+				newnode->sibling = tptr_prv;
+				*tptrptr = newnode;
 			}
 			else {
-				/* tcurnode has children and tptr_prv represents the last one */
+				/* Case: Last child is a non-else node */
 
-				tptr_prv->sibling = tmp;
+				tptr_prv->sibling = newnode;
 			}
 			
 			/* For the next character, this node will be the parent */
-			tcurnode = tmp;
+			tcurnode = newnode;
 		}
 	}
 	/* END Tree Construction */
