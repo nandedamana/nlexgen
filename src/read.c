@@ -21,11 +21,11 @@ size_t       tokbuflen;
 
 #ifdef NLEX_ITSELF
 /* Includes the escaping of special chars used by the lexgen */
-const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', '#', 0};
-const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', '#', 0};
+const char escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '#', 0};
+const char escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '#', 0};
 
 #else
-const char escin [] = {'a',  'n',  'r',  't',  'v',  '\\', '"', 0};
-const char escout[] = {'\a', '\n', '\r', '\t', '\v', '\\', '"', 0};
+const char escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', 0};
+const char escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', 0};
 
 #endif
