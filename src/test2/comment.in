@@ -1,1 +1,1 @@
-*/	{ state = NAN_STATE_DEFAULT; }
+*/	{ context = NAN_STATE_DEFAULT; }

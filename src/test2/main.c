@@ -36,7 +36,7 @@ int main()
 
 	nlex_init();
 	
-	int state = NAN_STATE_DEFAULT;
+	int context = NAN_STATE_DEFAULT;
 	int token;
 
 	while(1) {
@@ -65,22 +65,22 @@ int main()
 			continue;
 		}	
 
-		if(state == NAN_STATE_DEFAULT) {
+		if(context == NAN_STATE_DEFAULT) {
 			token = NAN_TOK_NONE;
 
 			#include "out/lexbranch-default.c"
 		}
-		else if(state == NAN_STATE_COMMENT) {
+		else if(context == NAN_STATE_COMMENT) {
 			#include "out/lexbranch-comment.c"
 		}
-		else if(state == NAN_STATE_STRING) {
+		else if(context == NAN_STATE_STRING) {
 			#include "out/lexbranch-string.c"
 		}
-		else if(state == NAN_STATE_STR_ESC) {
+		else if(context == NAN_STATE_STR_ESC) {
 			char escoutch = nlex_get_escout(ch);
 			if(escoutch != -1) {
 				nlex_tokbuf_append(escoutch);
-				state = NAN_STATE_STRING;
+				context = NAN_STATE_STRING;
 			}
 			else {
 				fprintf(stderr, "ERROR: Unknown escape sequence.\n");
