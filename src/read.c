@@ -17,7 +17,7 @@ char         ch;
 char       * tokbuf;
 char       * tokbufptr;
 char       * tokbufendptr;
-size_t      tokbuflen;
+size_t       tokbuflen;
 
 #ifdef NLEX_ITSELF
 /* Includes the escaping of special chars used by the lexgen */
