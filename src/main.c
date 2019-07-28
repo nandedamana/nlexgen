@@ -28,6 +28,7 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 
 	if(root->data.i == NLEX_CASE_ELSE) {
 		/* Child is an action node */
+		indent();
 		fprintf(fpout, "%s\n", (char *) root->first_child->data.ptr);
 		return;
 	}
@@ -49,8 +50,14 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 			/* First child itself is else means direct action.
 			 * Reading should be done in cases except this.
 			 */
-			if(tptr->first_child->data.i != NLEX_CASE_ELSE)
+			if(tptr->first_child->data.i != NLEX_CASE_ELSE) {
+				// XXX Calling indent() two times won't be useful if indent_level = 0
+				indent_level++;
+				indent();
+				indent_level--;
+
 				fprintf(fpout, "ch = nlex_getchar();\n");
+			}
 		}
 		else { /* Special cases */
 			switch(tptr->data.i) {
@@ -63,11 +70,6 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 			}
 		}
 		
-		// XXX Calling indent() two times won't be useful if indent_level = 0
-		indent_level++;
-		indent();
-		indent_level--;
-
 		nan_tree2code(tptr, indent_level + 1);
 
 		indent();
