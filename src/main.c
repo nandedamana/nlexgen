@@ -7,6 +7,9 @@
 #include "read.h"
 #include "tree.h"
 
+#define NLEX_CASE_ELSE     -1
+#define NLEX_CASE_SPACETAB -2
+
 void nan_tree2code(NanTreeNode *root, int indent_level)
 {
 	NanTreeNode * tptr;
@@ -41,6 +44,9 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 			switch(tptr->data.i) {
 			case NLEX_CASE_ELSE:
 				fprintf(fpout, "{\n"); /* 'else' has already been printed */
+				break;
+			case NLEX_CASE_SPACETAB:
+				fprintf(fpout, "if (ch == ' ' || ch == '\\t') {\n"); /* 'else' has already been printed */
 				break;
 			}
 		}
@@ -147,6 +153,34 @@ int main()
 						}
 					}
 				}
+				else if(ch == 's') {
+					ch = nlex_getchar();
+					if(ch == 'p') {
+						ch = nlex_getchar();
+						if(ch == 'a') {
+							ch = nlex_getchar();
+							if(ch == 'c') {
+								ch = nlex_getchar();
+								if(ch == 'e') {
+									ch = nlex_getchar();
+									if(ch == 't') {
+										ch = nlex_getchar();
+										if(ch == 'a') {
+											ch = nlex_getchar();
+											if(ch == 'b') {
+												ch = NLEX_CASE_SPACETAB;
+											}
+										}
+									}
+									else {
+										ch = ' ';
+									}
+								}
+							}
+						}
+					}
+				}
+
 				
 				if(ch >= 0 || /* Still a regular character OR */
 					/* the next character is not a separator */

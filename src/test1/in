@@ -1,2 +1,4 @@
+/* Just a comment to test the lexer part of nanlexgen */
+
 hello  { token = NAN_TOK_HELLO; }
 hi     { token = NAN_TOK_HI;    }
