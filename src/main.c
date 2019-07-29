@@ -39,7 +39,7 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 
 		if(childcount++ != 0)
 			fprintf(fpout, "else ");
-		
+
 		if(tptr->data.i >= 0) {
 			int escin = nlex_get_escin(tptr->data.i);
 			if(escin == -1) /* Not an escape sequence */
@@ -112,30 +112,45 @@ int main()
 				nlex_tokbuf_append(ch);
 			}
 
-			/* Two nodes have to be created: an else node and an action node. */
+			/* Now we have to create an action node. The action node is always
+			 * the child of an else node, even if there is no 'if' part.
+			 * This is for later convenience (from addition of more cases
+			 * to conversion).
+			 * So two nodes have to be created: an else node and an action node.
+			 * But no need of a new else node if the current node is already an else
+			 * node (explicit else specified by the user using #else)
+			 */
 
-			NanTreeNode *enode = malloc(sizeof(NanTreeNode));
-			if(!enode)
-				die("malloc() error.");
-
+			/* BEGIN Create the action node */
 			NanTreeNode *anode = malloc(sizeof(NanTreeNode));
 			if(!anode)
 				die("malloc() error.");
 
-			enode->data.i      = NLEX_CASE_ELSE;
-			enode->first_child = anode;
-			enode->sibling     = NULL;
-
-			tcurnode->first_child = malloc(sizeof(NanTreeNode));
-			if(!tcurnode->first_child)
-				die("malloc() error.");
-			
 			/* Copy the action. */
 			anode->data.ptr = tokbuf;
 			/* Nobody cares about first_child or sibling of an action node. */
-			
-			tcurnode->first_child = enode;
-			
+
+			/* END Create the action node */
+
+			/* BEGIN Attach the action node to the tree */
+			if(tcurnode->data.i == NLEX_CASE_ELSE) {
+				/* The current node is already an else */
+				
+				tcurnode->first_child = anode;
+			}
+			else {
+				NanTreeNode *enode = malloc(sizeof(NanTreeNode));
+				if(!enode)
+					die("malloc() error.");
+
+				enode->data.i      = NLEX_CASE_ELSE;
+				enode->first_child = anode;
+				enode->sibling     = NULL;
+
+				tcurnode->first_child = enode;
+			}
+			/* END Attach the action node to the tree */			
+
 			/* Reset the tree pointer */
 			tcurnode = &troot;
 			
