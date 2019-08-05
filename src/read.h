@@ -31,18 +31,24 @@ extern const char escin [];
 extern const char escout[];
 
 // TODO return int for err handling?
+// TODO doc: fpin = NULL means no file read
 static inline char nlex_getchar()
 {
-	/* Cyclic buffer */
-	if(bufptr == bufendptr) /* bufendptr is out of bound, so no memory wastage */
-		bufptr = buf;
+	/* If fpin is NULL, bufptr is assumed to be pointed to a pre-filled buffer.
+	 * This helps tokenize strings directly.
+	 */
+	if(fpin) {
+		/* Cyclic buffer */
+		if(bufptr == bufendptr) /* bufendptr is out of bound, so no memory wastage */
+			bufptr = buf;
 
-	/* Pointer at the beginning of the buffer means we have to read */
-	if(bufptr == buf) {
-		fread(buf, BUFLEN, 1, fpin);
-		if(ferror(fpin)) { // TODO enable custom error
-			fprintf(stderr, "Error reading input.\n");
-			exit(1);
+		/* Pointer at the beginning of the buffer means we have to read */
+		if(bufptr == buf) {
+			fread(buf, BUFLEN, 1, fpin);
+			if(ferror(fpin)) { // TODO enable custom error
+				fprintf(stderr, "Error reading input.\n");
+				exit(1);
+			}
 		}
 	}
 
