@@ -46,6 +46,11 @@ static inline char nlex_getchar()
 		}
 	}
 
+	/* Useful for line counting, col counting, etc. */
+	#ifdef nlex_while_getchar
+		nlex_while_getchar
+	#endif
+
 	/* Now return the character */
 	return *bufptr++;
 }
