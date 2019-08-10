@@ -30,6 +30,12 @@ extern size_t   tokbuflen;    /* Actual current buffer length   */
 extern const char escin [];
 extern const char escout[];
 
+/* XXX This should not be called twice without a nlex_getchar() in between. */
+static inline void nlex_back()
+{
+	bufptr--;
+}
+
 // TODO return int for err handling?
 // TODO doc: fpin = NULL means no file read
 static inline char nlex_getchar()
