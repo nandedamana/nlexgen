@@ -105,7 +105,7 @@ static inline void nlex_destroy(NlexHandle * nh, _Bool free_tokbuf)
 {
 	free(nh->buf);
 
-	if(free_tokbuf)
+	if(nh->tokbuf && free_tokbuf)
 		free(nh->tokbuf);
 }
 

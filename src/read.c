@@ -30,6 +30,8 @@ NlexHandle * nlex_handle_new()
 	nh->buflen      = NLEX_DEFT_BUFSIZE;
 	nh->tokbuf_unit = NLEX_DEFT_TBUF_UNIT;
 	
+	nh->tokbuf      = NULL;
+	
 	nh->on_back     = NULL;
 	nh->on_error    = nlex_onerror;
 	nh->on_getchar  = NULL;
