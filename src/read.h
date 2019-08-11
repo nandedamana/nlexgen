@@ -141,7 +141,7 @@ static inline int nlex_get_escout(char c)
 NlexHandle * nlex_handle_new();
 
 /* Only one of fpi or buf is required, and the other can be NULL. */
-void nlex_init(NlexHandle * nh, FILE * fpi, char * buf);
+void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf);
 
 /* Look at the last-read character without moving the pointer */
 static inline char nlex_last(NlexHandle * nh)

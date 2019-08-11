@@ -39,7 +39,7 @@ NlexHandle * nlex_handle_new()
 	return nh;
 }
 
-void nlex_init(NlexHandle * nh, FILE * fpi, char * buf)
+void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 {
 	if(fpi) {
 		nh->fp        = fpi;
@@ -53,7 +53,9 @@ void nlex_init(NlexHandle * nh, FILE * fpi, char * buf)
 		nh->bufendptr = nh->buf + nh->buflen;	
 	}
 	else {
-		nh->buf       = buf;
+		/* Casting is safe because I know I don't misuse it. */
+		nh->buf       = (char *) buf;
+		
 		nh->fp        = NULL;
 	}
 }
