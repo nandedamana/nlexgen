@@ -5,9 +5,11 @@
 #include "read.h"
 #include "tree.h"
 
-#define NLEX_CASE_ROOT     -1
-#define NLEX_CASE_ELSE     -2
-#define NLEX_CASE_SPACETAB -3
+#define NLEX_CASE_NONE     -1
+#define NLEX_CASE_ROOT     -2
+#define NLEX_CASE_ELSE     -3
+#define NLEX_CASE_SPACE    -4
+#define NLEX_CASE_SPACETAB -5
 
 void die(const char *msg) {
 	fprintf(stderr, "ERROR: %s\n", msg);
@@ -177,6 +179,8 @@ int main()
 				continue;
 			}
 			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
+				int specialcase = NLEX_CASE_NONE;
+			
 				ch = nlex_next(nh);
 				if(ch == 'e') {
 					ch = nlex_next(nh);
@@ -187,7 +191,7 @@ int main()
 							if(ch == 'e') {
 								ch = nlex_next(nh);
 								if(ch == ' ' || ch == '\t') {
-									ch = NLEX_CASE_ELSE;
+									specialcase = NLEX_CASE_ELSE;
 								}
 							}
 						}
@@ -210,13 +214,13 @@ int main()
 											if(ch == 'b') {
 												ch = nlex_next(nh);
 												if(ch == ' ' || ch == '\t') {
-													ch = NLEX_CASE_SPACETAB;
+													specialcase = NLEX_CASE_SPACETAB;
 												}
 											}
 										}
 									}
 									else if(ch == ' ' || ch == '\t') {
-										ch = ' ';
+										specialcase = NLEX_CASE_SPACE;
 									}
 								}
 							}
@@ -224,10 +228,13 @@ int main()
 					}
 				}
 
-				if(ch >= 0) /* Still a regular character */
+				if(specialcase == NLEX_CASE_NONE) {
 					die("Unknown or incomplete case specification.");
-				else
-					nlex_back(nh);
+				}
+				else {
+					ch = (specialcase == NLEX_CASE_SPACE)? NLEX_CASE_SPACE: specialcase;
+					nlex_back(nh); /* Back to the separator */
+				}
 			}
 		}
 
