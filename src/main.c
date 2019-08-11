@@ -2,8 +2,6 @@
  * Started on 2019-07-22
  */
 
-#define NLEX_ITSELF 1
-
 #include "read.h"
 #include "tree.h"
 
@@ -56,7 +54,7 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 				indent();
 				indent_level--;
 
-				fprintf(fpout, "ch = nlex_getchar();\n");
+				fprintf(fpout, "ch = nlex_next(nh);\n");
 			}
 		}
 		else { /* Special cases */
@@ -82,34 +80,37 @@ int main()
 	NanTreeNode   troot;
 	NanTreeNode * tcurnode = &troot;
 
-	fpin  = stdin;
-	fpout = stdout;
+	NlexHandle * nh;
+	int          ch;
+	_Bool        escaped = 0;
 
-	nlex_init();
+	fpout = stdout;
 
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
 	troot.data.i      = NLEX_CASE_ROOT;
 
-	int ch;
-
-	_Bool escaped = 0;
+	nh = nlex_handle_new();
+	if(!nh)
+		die("nlex_handle_new() returned NULL.");
+	
+	nlex_init(nh, stdin, NULL); // TODO FIXME not always stdin
 
 	/* BEGIN Tree Construction */
-	while( (ch = nlex_getchar()) != 0 && ch != EOF) {
+	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
 		if(ch == ' ' || ch == '\t') { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
 			
-			nlex_tokrec_init(); // TODO err
+			nlex_tokrec_init(nh); // TODO err
 			while(1) {
-				ch = nlex_getchar();
+				ch = nlex_next(nh);
 				
 				if(ch == '\n' || ch == EOF) {
-					nlex_tokrec_finish();
+					nlex_tokrec_finish(nh);
 					break;
 				}
 				
-				nlex_tokbuf_append(ch);
+				nlex_tokbuf_append(nh, ch);
 			}
 
 			/* Now we have to create an action node. The action node is always
@@ -127,7 +128,7 @@ int main()
 				die("malloc() error.");
 
 			/* Copy the action. */
-			anode->data.ptr = tokbuf;
+			anode->data.ptr = nh->tokbuf;
 			/* Nobody cares about first_child or sibling of an action node. */
 
 			/* END Create the action node */
@@ -176,39 +177,45 @@ int main()
 				continue;
 			}
 			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
-				ch = nlex_getchar();
+				ch = nlex_next(nh);
 				if(ch == 'e') {
-					ch = nlex_getchar();
+					ch = nlex_next(nh);
 					if(ch == 'l') {
-						ch = nlex_getchar();
+						ch = nlex_next(nh);
 						if(ch == 's') {
-							ch = nlex_getchar();
+							ch = nlex_next(nh);
 							if(ch == 'e') {
-								ch = NLEX_CASE_ELSE;
+								ch = nlex_next(nh);
+								if(ch == ' ' || ch == '\t') {
+									ch = NLEX_CASE_ELSE;
+								}
 							}
 						}
 					}
 				}
 				else if(ch == 's') {
-					ch = nlex_getchar();
+					ch = nlex_next(nh);
 					if(ch == 'p') {
-						ch = nlex_getchar();
+						ch = nlex_next(nh);
 						if(ch == 'a') {
-							ch = nlex_getchar();
+							ch = nlex_next(nh);
 							if(ch == 'c') {
-								ch = nlex_getchar();
+								ch = nlex_next(nh);
 								if(ch == 'e') {
-									ch = nlex_getchar();
+									ch = nlex_next(nh);
 									if(ch == 't') {
-										ch = nlex_getchar();
+										ch = nlex_next(nh);
 										if(ch == 'a') {
-											ch = nlex_getchar();
+											ch = nlex_next(nh);
 											if(ch == 'b') {
-												ch = NLEX_CASE_SPACETAB;
+												ch = nlex_next(nh);
+												if(ch == ' ' || ch == '\t') {
+													ch = NLEX_CASE_SPACETAB;
+												}
 											}
 										}
 									}
-									else {
+									else if(ch == ' ' || ch == '\t') {
 										ch = ' ';
 									}
 								}
@@ -217,13 +224,10 @@ int main()
 					}
 				}
 
-				
-				if(ch >= 0 || /* Still a regular character OR */
-					/* the next character is not a separator */
-					!( *bufptr == ' ' || *bufptr == '\t' ) )
-				{ 
+				if(ch >= 0) /* Still a regular character */
 					die("Unknown or incomplete case specification.");
-				}
+				else
+					nlex_back(nh);
 			}
 		}
 
@@ -243,7 +247,7 @@ int main()
 				break;
 			}
 		}
-		
+
 		if(tmatching_node) {
 			tcurnode = tmatching_node;
 		}

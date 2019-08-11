@@ -11,21 +11,21 @@
 
 int main()
 {
-	fpin  = stdin;
 	fpout = stdout;
-
-	bufptr = buf;
-
-	/* Precalculate for efficient later comparisons.
-	 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
-	*/
-	bufendptr = buf + BUFLEN;
 	
 	int token;
 	char ch;
 
+	NlexHandle * nh;
+
+	nh = nlex_handle_new();
+	if(!nh)
+		fprintf(stderr, "ERROR: nlex_handle_new() returned NULL.\n");
+	
+	nlex_init(nh, stdin, NULL);	
+
 	while(1) {
-		ch = nlex_getchar();
+		ch = nlex_next(nh);
 		
 		if(ch == ' ' || ch == '\n' || ch == 0 || ch == EOF) { /* Separator */
 			if(token != NAN_TOK_NONE)

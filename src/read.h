@@ -9,146 +9,163 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define BUFLEN 4096
+#define NLEX_DEFT_BUFSIZE   4096
+#define NLEX_DEFT_TBUF_UNIT 32
 
-extern FILE * fpin;
+typedef enum _NlexError {
+	NLEX_ERR_NONE = 0,
+	NLEX_ERR_MALLOC,
+	NLEX_ERR_REALLOC,
+	NLEX_ERR_READING
+} NlexError;
+
+typedef struct _NlexHandle {
+	/* Parameters that can only be set before calling nlex_init()
+	 * (if unset, will be initialized by nlex_init())
+	 */
+	size_t buflen;
+	size_t tokbuf_unit;
+	
+	/* Parameters that can be set anytime */
+	void (*on_back)   (struct _NlexHandle * nh);
+	void (*on_error)  (struct _NlexHandle * nh, int errno);
+	void (*on_getchar)(struct _NlexHandle * nh); /* Called after re-buffering */
+
+	/* Set by nlex_init() */
+	FILE * fp;
+	char * buf;          /* Cyclic buffer */
+	
+	/* bufptr usually points to the next character to read,
+	 * but not while at the end of the buffer due to the cyclic nature.
+	 */
+	char * bufptr;
+
+	char * bufendptr;
+	
+	/* Set by nlex_tokrec_init() */
+	char * tokbuf;       /* Not cyclic */
+	char * tokbufptr;
+	char * tokbufendptr;
+
+	/* Set by the lexer */
+	size_t tokbuflen;
+	
+	/* For custom data (will not be initialized to NULL by nlex_*()) */
+	void * data;
+} NlexHandle;
+
+/* NLEX_ITSELF can be set using the gcc option -D */
+#ifdef NLEX_ITSELF
 extern FILE * fpout;
-
-extern char         buf[BUFLEN];
-extern char       * bufptr;
-extern const char * bufendptr;
-
-extern char         ch;
-
-#define TOKBUF_UNIT 32
-
-extern char   * tokbuf;
-extern char   * tokbufptr;
-extern char   * tokbufendptr;
-extern size_t   tokbuflen;    /* Actual current buffer length   */
+#endif
 
 extern const char escin [];
 extern const char escout[];
 
-/* XXX This should not be called twice without a nlex_getchar() in between. */
-static inline void nlex_back()
+/* Sets errno and calls the error handling function on error */
+static inline void * nlex_malloc(NlexHandle * nh, size_t size)
 {
-	bufptr--;
+	void * newptr;
+	
+	newptr = malloc(size);
+	if(!newptr)
+		nh->on_error(nh, NLEX_ERR_MALLOC);
+	
+	return newptr;
 }
 
-// TODO return int for err handling?
-// TODO doc: fpin = NULL means no file read
-static inline char nlex_getchar()
+/* Sets errno and calls the error handling function on error */
+static inline void * nlex_realloc(NlexHandle * nh, void * ptr, size_t size)
 {
-	/* If fpin is NULL, bufptr is assumed to be pointed to a pre-filled buffer.
-	 * This helps tokenize strings directly.
-	 */
-	if(fpin) {
-		/* Cyclic buffer */
-		if(bufptr == bufendptr) /* bufendptr is out of bound, so no memory wastage */
-			bufptr = buf;
-
-		/* Pointer at the beginning of the buffer means we have to read */
-		if(bufptr == buf) {
-			fread(buf, BUFLEN, 1, fpin);
-			if(ferror(fpin)) { // TODO enable custom error
-				fprintf(stderr, "Error reading input.\n");
-				exit(1);
-			}
-		}
-	}
-
-	/* Useful for line counting, col counting, etc. */
-	#ifdef nlex_while_getchar
-		nlex_while_getchar
-	#endif
-
-	/* Now return the character */
-	return *bufptr++;
+	void * newptr;
+	
+	newptr = realloc(ptr, size);
+	if(!newptr)
+		nh->on_error(nh, NLEX_ERR_REALLOC);
+	
+	return newptr;
 }
 
-static inline int nlex_get_escin(char ch)
+/* XXX This should not be called twice without a nlex_next() in between. */
+static inline void nlex_back(NlexHandle * nh)
+{
+	/* Trust me, it works. */
+	nh->bufptr--;
+	
+	/* Useful for line uncounting */
+	if(nh->on_back)
+		nh->on_back(nh);
+}
+
+/**
+ * Call free() on buffers
+ * @param free_tokbuf Usually false because you might have copied tokbuf without strcpy() or strdup()
+ */
+static inline void nlex_destroy(NlexHandle * nh, _Bool free_tokbuf)
+{
+	free(nh->buf);
+
+	if(free_tokbuf)
+		free(nh->tokbuf);
+}
+
+/* Call nlex_destroy() and then set the pointer to NULL */
+static inline void nlex_destroy_and_null(NlexHandle ** nhp, _Bool free_tokbuf)
+{
+	nlex_destroy(*nhp, free_tokbuf);
+	*nhp = NULL;
+}
+
+static inline int nlex_get_escin(char c)
 {
 	const char *ptr;
 
 	for(ptr = escout; *ptr; ptr++)
-		if(ch == *ptr)
+		if(c == *ptr)
 			return escin[(ptr - escout)];
 
 	return -1;
 }
 
-static inline int nlex_get_escout(char ch)
+static inline int nlex_get_escout(char c)
 {
 	const char *ptr;
 
 	for(ptr = escin; *ptr; ptr++)
-		if(ch == *ptr)
+		if(c == *ptr)
 			return escout[(ptr - escin)];
 
 	return -1;
 }
 
-static inline void nlex_init()
-{
-	bufptr = buf;
+NlexHandle * nlex_handle_new();
 
-	/* Precalculate for efficient later comparisons.
-	 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
-	*/
-	bufendptr = buf + BUFLEN;	
+/* Only one of fpi or buf is required, and the other can be NULL. */
+void nlex_init(NlexHandle * nh, FILE * fpi, char * buf);
+
+/* Look at the last-read character without moving the pointer */
+static inline char nlex_last(NlexHandle * nh)
+{
+	return *(nh->bufptr - 1);
 }
 
-static inline void nlex_tokbuf_append(const char ch) {
-	/* bufendptr is out of bound, so no memory wastage */
-	if(tokbufptr == tokbufendptr) {
-		tokbuflen += TOKBUF_UNIT;
-		tokbuf     = realloc(tokbuf, tokbuflen);
-		if(!tokbuf) { // TODO enable custom error
-			fprintf(stderr, "realloc() error.\n");
-			exit(1);
-		}
-		
-		tokbufendptr = tokbuf + tokbuflen;
-		
-		/* Resetting tokbufptr is a must after realloc() since the buffer might
-		 * have been relocated.
-		 */
-		tokbufptr    = tokbufendptr - TOKBUF_UNIT;
-	}
+char nlex_next(NlexHandle * nh);
 
-	*tokbufptr++ = ch;
-}
+void nlex_onerror(NlexHandle * nh, int errno);
 
-// TODO enable custom error when nlex_tokbuf_append allows
-static inline void nlex_tokrec()
+void nlex_tokbuf_append(NlexHandle * nh, const char c);
+
+static inline void nlex_tokrec(NlexHandle * nh)
 {
-	nlex_tokbuf_append(ch);
+	nlex_tokbuf_append(nh, nlex_last(nh));
 }
 
 /* Initialize the token buffer */
-// TODO option to handle err here itself
-static inline int nlex_tokrec_init()
-{
-	/* calloc() may ensure automatic null-termination,
-	 * but later realloc() won't. Hence malloc().
-	 */
-	tokbuf = malloc(TOKBUF_UNIT);
-	if(!tokbuf)
-		return 1;
-
-	tokbufptr = tokbuf;
-	tokbuflen = TOKBUF_UNIT;
-
-	/* Precalculate for efficient comparison */
-	tokbufendptr = tokbuf + TOKBUF_UNIT;
-
-	return 0;
-}
+void nlex_tokrec_init(NlexHandle * nh);
 
 /* Just null-termination; no memory cleanup. */
-static inline int nlex_tokrec_finish()
+static inline void nlex_tokrec_finish(NlexHandle * nh)
 {
-	*tokbufptr = '\0';
+	*(nh->tokbufptr) = '\0';
 }
 #endif
