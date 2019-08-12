@@ -41,23 +41,21 @@ NlexHandle * nlex_handle_new()
 
 void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 {
+	nh->fp          = fpi;
+
+	/* Casting is safe because I know I don't misuse it. */
+	nh->buf         = (char *) buf;
+
 	if(fpi) {
-		nh->fp        = fpi;
-	
 		nh->buf       = nlex_malloc(nh, sizeof(NlexHandle));
-		nh->bufptr    = nh->buf;
 
 		/* Precalculate for efficient later comparisons.
 		 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
 		*/
 		nh->bufendptr = nh->buf + nh->buflen;	
 	}
-	else {
-		/* Casting is safe because I know I don't misuse it. */
-		nh->buf       = (char *) buf;
-		
-		nh->fp        = NULL;
-	}
+
+	nh->bufptr      = nh->buf;
 }
 
 char nlex_next(NlexHandle * nh)
