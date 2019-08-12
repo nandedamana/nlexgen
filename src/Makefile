@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=c99 -DNLEX_ITSELF -g
+CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
 
 default:lexgen
 
