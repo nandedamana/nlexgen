@@ -103,7 +103,9 @@ static inline void nlex_back(NlexHandle * nh)
  */
 static inline void nlex_destroy(NlexHandle * nh, _Bool free_tokbuf)
 {
-	free(nh->buf);
+	/* nh->fp is NULL means buf was given by the user and should not be freed. */
+	if(nh->fp)
+		free(nh->buf);
 
 	if(nh->tokbuf && free_tokbuf)
 		free(nh->tokbuf);
