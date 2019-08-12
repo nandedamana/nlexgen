@@ -27,9 +27,12 @@ typedef struct _NlexHandle {
 	size_t tokbuf_unit;
 	
 	/* Parameters that can be set anytime */
-	void (*on_back)   (struct _NlexHandle * nh);
-	void (*on_error)  (struct _NlexHandle * nh, int errno);
-	void (*on_getchar)(struct _NlexHandle * nh); /* Called after re-buffering */
+	void (*on_error)(struct _NlexHandle * nh, int errno);
+	void (*on_next) (struct _NlexHandle * nh); /* Called after re-buffering,
+	                                            * before pointer update,
+	                                            * meaning (*bufptr) is the newly
+	                                            * read character.
+	                                            */
 
 	/* Set by nlex_init() */
 	FILE * fp;
@@ -91,10 +94,6 @@ static inline void nlex_back(NlexHandle * nh)
 {
 	/* Trust me, it works. */
 	nh->bufptr--;
-	
-	/* Useful for line uncounting */
-	if(nh->on_back)
-		nh->on_back(nh);
 }
 
 /**

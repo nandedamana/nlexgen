@@ -32,9 +32,8 @@ NlexHandle * nlex_handle_new()
 	
 	nh->tokbuf      = NULL;
 	
-	nh->on_back     = NULL;
 	nh->on_error    = nlex_onerror;
-	nh->on_getchar  = NULL;
+	nh->on_next     = NULL;
 	
 	return nh;
 }
@@ -80,8 +79,8 @@ char nlex_next(NlexHandle * nh)
 	}
 
 	/* Useful for line counting, col counting, etc. */
-	if(nh->on_getchar)
-		nh->on_getchar(nh);
+	if(nh->on_next)
+		nh->on_next(nh);
 
 	/* Now return the character */
 	return *(nh->bufptr++);
