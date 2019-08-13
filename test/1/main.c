@@ -52,7 +52,7 @@ int main()
 		
 		token = NAN_TOK_NONE;
 
-		#include "out/lexbranch.c"
+		#include "lexbranch.c"
 	}
 
 	return 0;

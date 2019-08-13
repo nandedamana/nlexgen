@@ -2,7 +2,7 @@ CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
 
 default:out/lexer
 
-out/lexer:*.in main.c ../../src/read.o
+out/lexer:*.in main.c ../../src/read.o ../../*.h
 	mkdir -p out
 	cat default.in|../../src/lexgen > out/lexbranch-default.c
 	cat comment.in|../../src/lexgen > out/lexbranch-comment.c
