@@ -16,7 +16,7 @@ void die(const char *msg) {
 	exit(1);
 }
 
-void nan_tree2code(NanTreeNode *root, int indent_level)
+void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 {
 	NanTreeNode * tptr;
 	int childcount = 0;
@@ -33,14 +33,22 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 		return;
 	}
 
-	/* For non-leaf nodes */
+	if(root->first_child == NULL) /* Leaf node */
+		return;
+
+	/* Override elsenode if any of the children is a genuine else node */
+	for(tptr = root->first_child->sibling; tptr; tptr = tptr->sibling)
+		if(tptr->data.i == NLEX_CASE_ELSE)
+			elsenode = tptr;
+			/* No need of manual break since there will be no nodes after an else */
+
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		indent();
 
-		if(childcount++ != 0)
+		if(childcount++ != 0) /* Not the first child */
 			fprintf(fpout, "else ");
 
-		if(tptr->data.i >= 0) {
+		if(tptr->data.i >= 0) { /* Regular character; not a special case. */
 			int escin = nlex_get_escin(tptr->data.i);
 			if(escin == -1) /* Not an escape sequence */
 				fprintf(fpout, "if(ch == '%c') {\n", tptr->data.i);
@@ -62,7 +70,13 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 		else { /* Special cases */
 			switch(tptr->data.i) {
 			case NLEX_CASE_ELSE:
-				fprintf(fpout, "{\n"); /* 'else' has already been printed */
+				/* 'else' has already been printed */
+				/* TODO Small numbers instead of pointer values */
+				
+				if(tptr == root->first_child) /* Not real else, but action nodes */
+					fprintf(fpout, "{\n");
+				else
+					fprintf(fpout, "{ state_%p:\n", tptr);
 				break;
 			case NLEX_CASE_SPACETAB:
 				fprintf(fpout, "if (ch == ' ' || ch == '\\t') {\n"); /* 'else' has already been printed */
@@ -70,10 +84,14 @@ void nan_tree2code(NanTreeNode *root, int indent_level)
 			}
 		}
 		
-		nan_tree2code(tptr, indent_level + 1);
+		nan_tree2code(tptr, elsenode, indent_level + 1); // TODO
 
 		indent();
-		fprintf(fpout, "}\n");
+
+		if(elsenode && tptr->sibling == NULL && tptr->data.i != NLEX_CASE_ELSE)
+			fprintf(fpout, "} else goto state_%p;\n", elsenode);
+		else
+			fprintf(fpout, "}\n");
 	}
 }
 
@@ -310,7 +328,7 @@ int main()
 
 	/* BEGIN Code Generation */
 
-	nan_tree2code(&troot, 0);
+	nan_tree2code(&troot, NULL, 0);
 
 	/* END Code Generation */
 
