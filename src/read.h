@@ -12,6 +12,14 @@
 #define NLEX_DEFT_BUFSIZE   4096
 #define NLEX_DEFT_TBUF_UNIT 32
 
+/* Because EOF can be any value and writing down a constant here can
+ * cause confusion with EOF.
+ * -1 because EOF is already -ve and +N may make it some ASCII character.
+ */
+#define NAN_NOMATCH (EOF - 1)
+
+typedef signed int NlexCharacter; /* Negative values are for special cases */
+
 typedef enum _NlexError {
 	NLEX_ERR_NONE = 0,
 	NLEX_ERR_MALLOC,
@@ -61,13 +69,13 @@ typedef struct _NlexHandle {
 #ifdef NLEX_ITSELF
 extern FILE * fpout;
 
-extern const char escin [];
-extern const char escout[];
+extern const NlexCharacter escin [];
+extern const NlexCharacter escout[];
 #endif
 
 /* Escape sequence mapping for C output */
-extern const char escin_c [];
-extern const char escout_c[];
+extern const NlexCharacter escin_c [];
+extern const NlexCharacter escout_c[];
 
 /* Sets errno and calls the error handling function on error */
 static inline void * nlex_malloc(NlexHandle * nh, size_t size)
@@ -122,15 +130,17 @@ static inline void nlex_destroy_and_null(NlexHandle ** nhp, _Bool free_tokbuf)
 }
 
 /* Find the counterpart of c of list1 in list2 */
-static inline int nlex_get_counterpart(char c, const char * list1, const char * list2)
+static inline int
+	nlex_get_counterpart
+		(const signed int c, const signed int * list1, const signed int * list2)
 {
-	const char *ptr;
+	const signed int *ptr;
 
-	for(ptr = list1; *ptr; ptr++)
+	for(ptr = list1; *ptr != NAN_NOMATCH; ptr++)
 		if(c == *ptr)
 			return list2[(ptr - list1)];
 
-	return -1;
+	return NAN_NOMATCH;
 }
 
 NlexHandle * nlex_handle_new();

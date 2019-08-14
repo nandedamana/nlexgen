@@ -178,7 +178,7 @@ int main()
 
 		if(escaped) {
 			ch = nlex_get_counterpart(ch, escin, escout);
-			if(ch != -1)
+			if(ch != NAN_NOMATCH)
 				escaped = 0;
 			else
 				die("Unknown escape sequence."); // TODO line and col

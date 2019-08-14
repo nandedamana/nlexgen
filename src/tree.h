@@ -15,10 +15,8 @@
  * the components that can be used by other programs.
  */
 
-typedef signed int NanCharacter; /* Negative values are for special cases */
-
 typedef struct _NanTreeNode {
-  NanCharacter          ch;
+  NlexCharacter         ch;
 
 	/* If ch is NLEX_CASE_ELSE, ptr points to the user-given output code.
 	 * If ch is NLEX_CASE_LIST, ptr points to the a NanCharacter array.
@@ -32,27 +30,30 @@ typedef struct _NanTreeNode {
 
 /* To match multiple characters at a time */
 typedef struct _NanCharacterList {
-	NanCharacter * list;
-	size_t         count;
+	NlexCharacter * list;
+	size_t          count;
 } NanCharacterList;
 
 /* Print a character to the C source code output with escaping if needed */
 static inline void nan_c_print_character(char c, FILE * fp)
 {
 	int escin = nlex_get_counterpart(c, escout_c, escin_c);
-	if(escin == -1)
+
+	if(escin == NAN_NOMATCH)
 		fprintf(fp, "'%c'", c);
+	else if(escin == EOF)
+		fprintf(fp, "EOF");
 	else
 		fprintf(fp, "'\\%c'", escin);
 }
 
 static inline void
-	nan_character_list_append(NanCharacterList * ncl, NanCharacter c)
+	nan_character_list_append(NanCharacterList * ncl, NlexCharacter c)
 {
-	ncl->list = realloc(ncl->list, ncl->count + 1);
+	ncl->list = realloc(ncl->list, sizeof(NlexCharacter) * (ncl->count + 1));
 	if(!ncl->list)
 		die("realloc() error.");
-	
+
 	ncl->list[ncl->count++] = c;
 }
 
