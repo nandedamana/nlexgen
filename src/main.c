@@ -287,7 +287,7 @@ int main()
 			/* Again, no problem if chlist is invalid since
 			 * ch will not be NLEX_CASE_LIST in that case.
 			 */
-			tmpnode->ptr         = chlist;
+			newnode->ptr         = chlist;
 			
 			newnode->sibling     = NULL;
 			newnode->first_child = NULL;

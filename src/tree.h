@@ -104,6 +104,7 @@ static inline _Bool
 				if(NAN_CHARACTER_LIST(node1->ptr)->list[i] !=
 					NAN_CHARACTER_LIST(node2->ptr)->list[i])
 				{
+					matches = 0;
 					break;
 				}
 				
