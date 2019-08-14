@@ -5,17 +5,6 @@
 #include "read.h"
 #include "tree.h"
 
-#define NLEX_CASE_NONE     -1
-#define NLEX_CASE_ROOT     -2
-#define NLEX_CASE_ELSE     -3
-#define NLEX_CASE_SPACE    -4
-#define NLEX_CASE_SPACETAB -5
-
-void die(const char *msg) {
-	fprintf(stderr, "ERROR: %s\n", msg);
-	exit(1);
-}
-
 void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 {
 	NanTreeNode * tptr;
@@ -26,10 +15,10 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 	// TODO precreate a padding string
 	#define indent(); for(i = 0; i < indent_level; i++) fputc(' ', fpout);
 
-	if(root->data.i == NLEX_CASE_ELSE) {
+	if(root->ch == NLEX_CASE_ELSE) {
 		/* Child is an action node */
 		indent();
-		fprintf(fpout, "%s\n", (char *) root->first_child->data.ptr);
+		fprintf(fpout, "%s\n", (char *) root->first_child->ptr);
 		return;
 	}
 
@@ -38,7 +27,7 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 
 	/* Override elsenode if any of the children is a genuine else node */
 	for(tptr = root->first_child->sibling; tptr; tptr = tptr->sibling)
-		if(tptr->data.i == NLEX_CASE_ELSE)
+		if(tptr->ch == NLEX_CASE_ELSE)
 			elsenode = tptr;
 			/* No need of manual break since there will be no nodes after an else */
 
@@ -48,17 +37,15 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 		if(childcount++ != 0) /* Not the first child */
 			fprintf(fpout, "else ");
 
-		if(tptr->data.i >= 0) { /* Regular character; not a special case. */
-			int escin = nlex_get_escin(tptr->data.i);
-			if(escin == -1) /* Not an escape sequence */
-				fprintf(fpout, "if(ch == '%c') {\n", tptr->data.i);
-			else
-				fprintf(fpout, "if(ch == '\\%c') {\n", escin);
+		if(tptr->ch >= 0) { /* Regular character; not a special case. */
+			fprintf(fpout, "if(ch == ");
+			nan_c_print_character(tptr->ch, fpout);
+			fprintf(fpout, ") {\n");
 
 			/* First child itself is else means direct action.
 			 * Reading should be done in cases except this.
 			 */
-			if(tptr->first_child->data.i != NLEX_CASE_ELSE) {
+			if(tptr->first_child->ch != NLEX_CASE_ELSE) {
 				// XXX Calling indent() two times won't be useful if indent_level = 0
 				indent_level++;
 				indent();
@@ -68,7 +55,7 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 			}
 		}
 		else { /* Special cases */
-			switch(tptr->data.i) {
+			switch(tptr->ch) {
 			case NLEX_CASE_ELSE:
 				/* 'else' has already been printed */
 				/* TODO Small numbers instead of pointer values */
@@ -78,8 +65,10 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 				else
 					fprintf(fpout, "{ state_%p:\n", tptr);
 				break;
-			case NLEX_CASE_SPACETAB:
-				fprintf(fpout, "if (ch == ' ' || ch == '\\t') {\n"); /* 'else' has already been printed */
+			case NLEX_CASE_LIST:
+				fprintf(fpout, "if ("); /* 'else' has already been printed */
+				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
+				fprintf(fpout, ") {\n");
 				break;
 			}
 		}
@@ -88,7 +77,7 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 
 		indent();
 
-		if(elsenode && tptr->sibling == NULL && tptr->data.i != NLEX_CASE_ELSE)
+		if(elsenode && tptr->sibling == NULL && tptr->ch != NLEX_CASE_ELSE)
 			fprintf(fpout, "} else goto state_%p;\n", elsenode);
 		else
 			fprintf(fpout, "}\n");
@@ -103,12 +92,15 @@ int main()
 	NlexHandle * nh;
 	int          ch;
 	_Bool        escaped = 0;
+	_Bool        in_list = 0; /* [] */
+
+	NanCharacterList * chlist;
 
 	fpout = stdout;
 
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
-	troot.data.i      = NLEX_CASE_ROOT;
+	troot.ch      = NLEX_CASE_ROOT;
 
 	nh = nlex_handle_new();
 	if(!nh)
@@ -118,7 +110,7 @@ int main()
 
 	/* BEGIN Tree Construction */
 	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
-		if(ch == ' ' || ch == '\t') { /* token-action separator */
+		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
 			
 			nlex_tokrec_init(nh); // TODO err
@@ -148,13 +140,13 @@ int main()
 				die("malloc() error.");
 
 			/* Copy the action. */
-			anode->data.ptr = nh->tokbuf;
+			anode->ptr = nh->tokbuf;
 			/* Nobody cares about first_child or sibling of an action node. */
 
 			/* END Create the action node */
 
 			/* BEGIN Attach the action node to the tree */
-			if(tcurnode->data.i == NLEX_CASE_ELSE) {
+			if(tcurnode->ch == NLEX_CASE_ELSE) {
 				/* The current node is already an else */
 				
 				tcurnode->first_child = anode;
@@ -164,7 +156,7 @@ int main()
 				if(!enode)
 					die("malloc() error.");
 
-				enode->data.i      = NLEX_CASE_ELSE;
+				enode->ch          = NLEX_CASE_ELSE;
 				enode->first_child = anode;
 				enode->sibling     = NULL;
 
@@ -182,21 +174,41 @@ int main()
 		 * But this ensures safety in case I change something.
 		 */
 		else if(ch == '\n' || ch == 0 || ch == EOF)
-			die("No action given for a token.");
+			die("No action given for a token."); // TODO line and col
 
 		if(escaped) {
-			ch = nlex_get_escout(ch);
+			ch = nlex_get_counterpart(ch, escin, escout);
 			if(ch != -1)
 				escaped = 0;
 			else
-				die("Unknown escape sequence.");
+				die("Unknown escape sequence."); // TODO line and col
 		}
 		else {
 			if(ch == '\\') {
 				escaped = 1;
 				continue;
 			}
+			else if(ch == '[') {
+				if(in_list)
+					die("List inside list."); // TODO line and col
+
+				chlist  = nan_character_list_new();
+				in_list = 1;
+				continue;
+			}
+			else if(ch == ']') {
+				if(!in_list)
+					die("Closing a list that was never open."); // TODO line and col
+
+				in_list = 0;
+				ch = NLEX_CASE_LIST;
+				/* Go on; the list will be added to the tree. */
+			}
 			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
+				if(in_list)
+					die("Special cases are not permitted inside lists."); // TODO line and col
+
+				/* Directly assigning to ch will be confusing */
 				int specialcase = NLEX_CASE_NONE;
 			
 				ch = nlex_next(nh);
@@ -215,45 +227,20 @@ int main()
 						}
 					}
 				}
-				else if(ch == 's') {
-					ch = nlex_next(nh);
-					if(ch == 'p') {
-						ch = nlex_next(nh);
-						if(ch == 'a') {
-							ch = nlex_next(nh);
-							if(ch == 'c') {
-								ch = nlex_next(nh);
-								if(ch == 'e') {
-									ch = nlex_next(nh);
-									if(ch == 't') {
-										ch = nlex_next(nh);
-										if(ch == 'a') {
-											ch = nlex_next(nh);
-											if(ch == 'b') {
-												ch = nlex_next(nh);
-												if(ch == ' ' || ch == '\t') {
-													specialcase = NLEX_CASE_SPACETAB;
-												}
-											}
-										}
-									}
-									else if(ch == ' ' || ch == '\t') {
-										specialcase = NLEX_CASE_SPACE;
-									}
-								}
-							}
-						}
-					}
-				}
 
 				if(specialcase == NLEX_CASE_NONE) {
 					die("Unknown or incomplete case specification.");
 				}
 				else {
-					ch = (specialcase == NLEX_CASE_SPACE)? NLEX_CASE_SPACE: specialcase;
+					ch = specialcase;
 					nlex_back(nh); /* Back to the separator */
 				}
 			}
+		}
+
+		if(in_list) {
+			nan_character_list_append(chlist, ch);
+			continue;
 		}
 
 		NanTreeNode * tmatching_node = NULL;
@@ -262,16 +249,30 @@ int main()
 		NanTreeNode * tptr_prv = NULL;
 
 		NanTreeNode * tptr;
+		
+		/* A temporary node to make the comparison easier */
+		NanTreeNode * tmpnode = malloc(sizeof(NanTreeNode));
+		if(!tmpnode)
+			die("malloc() error.");
+
+		tmpnode->ch   = ch;
+		/* No problem if chlist is invalid since
+		 * ch will not be NLEX_CASE_LIST in that case.
+		 */
+
+		tmpnode->ptr = chlist;
 
 		/* Check if any child of the current node represents the new character */
 		for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling) {
 			tptr_prv = tptr;
 
-			if(tptr->data.i == ch) {
+			if(nan_tree_nodes_match(tptr, tmpnode)) {
 				tmatching_node = tptr;
 				break;
 			}
 		}
+
+		free(tmpnode);
 
 		if(tmatching_node) {
 			tcurnode = tmatching_node;
@@ -281,7 +282,13 @@ int main()
 			if(!newnode)
 				die("malloc() error.");
 			
-			newnode->data.i      = ch;
+			newnode->ch          = ch;
+			
+			/* Again, no problem if chlist is invalid since
+			 * ch will not be NLEX_CASE_LIST in that case.
+			 */
+			tmpnode->ptr         = chlist;
+			
 			newnode->sibling     = NULL;
 			newnode->first_child = NULL;
 			
@@ -302,7 +309,7 @@ int main()
 
 				tcurnode->first_child = newnode;
 			}
-			else if(tptr_prv->data.i == NLEX_CASE_ELSE) {
+			else if(tptr_prv->ch == NLEX_CASE_ELSE) {
 				/* Case: Last child is an else node */
 				/* The insertion has to be made before this node */
 				
@@ -325,6 +332,9 @@ int main()
 		}
 	}
 	/* END Tree Construction */
+
+	if(in_list)
+		die("List opened but not closed."); // TODO line and col
 
 	/* BEGIN Code Generation */
 

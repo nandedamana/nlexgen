@@ -60,10 +60,14 @@ typedef struct _NlexHandle {
 /* NLEX_ITSELF can be set using the gcc option -D */
 #ifdef NLEX_ITSELF
 extern FILE * fpout;
-#endif
 
 extern const char escin [];
 extern const char escout[];
+#endif
+
+/* Escape sequence mapping for C output */
+extern const char escin_c [];
+extern const char escout_c[];
 
 /* Sets errno and calls the error handling function on error */
 static inline void * nlex_malloc(NlexHandle * nh, size_t size)
@@ -117,24 +121,14 @@ static inline void nlex_destroy_and_null(NlexHandle ** nhp, _Bool free_tokbuf)
 	*nhp = NULL;
 }
 
-static inline int nlex_get_escin(char c)
+/* Find the counterpart of c of list1 in list2 */
+static inline int nlex_get_counterpart(char c, const char * list1, const char * list2)
 {
 	const char *ptr;
 
-	for(ptr = escout; *ptr; ptr++)
+	for(ptr = list1; *ptr; ptr++)
 		if(c == *ptr)
-			return escin[(ptr - escout)];
-
-	return -1;
-}
-
-static inline int nlex_get_escout(char c)
-{
-	const char *ptr;
-
-	for(ptr = escin; *ptr; ptr++)
-		if(c == *ptr)
-			return escout[(ptr - escin)];
+			return list2[(ptr - list1)];
 
 	return -1;
 }

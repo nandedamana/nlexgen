@@ -1,4 +1,4 @@
 \n              { continue; }
-hello#spacetab  { token = NAN_TOK_HELLO; }
-hi#spacetab     { token = NAN_TOK_HI;    }
+hello[\t ]      { token = NAN_TOK_HELLO; }
+hi[\t ]         { token = NAN_TOK_HI;    }
 #else           { fprintf(stderr, "HERE!\n"); token = NAN_TOK_NONE;  }
