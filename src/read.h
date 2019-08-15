@@ -154,7 +154,7 @@ static inline char nlex_last(NlexHandle * nh)
 	return *(nh->bufptr - 1);
 }
 
-char nlex_next(NlexHandle * nh);
+int nlex_next(NlexHandle * nh);
 
 void nlex_onerror(NlexHandle * nh, int errno);
 

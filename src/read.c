@@ -56,12 +56,15 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	nh->bufptr      = nh->buf;
 }
 
-char nlex_next(NlexHandle * nh)
+int nlex_next(NlexHandle * nh)
 {
 	/* If fp is NULL, bufptr is assumed to be pointed to a pre-filled buffer.
 	 * This helps tokenize strings directly.
 	 */
 	if(nh->fp) {
+		if(feof(nh->fp))
+			return EOF;
+
 		/* Cyclic buffer
 		 * (bufendptr is out of bound, so no memory wastage due to the following 
 		 * comparison)
