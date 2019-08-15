@@ -35,16 +35,19 @@ typedef struct _NanCharacterList {
 } NanCharacterList;
 
 /* Print a character to the C source code output with escaping if needed */
-static inline void nan_c_print_character(char c, FILE * fp)
+static inline void nan_c_print_character(NlexCharacter c, FILE * fp)
 {
-	int escin = nlex_get_counterpart(c, escout_c, escin_c);
-
-	if(escin == NAN_NOMATCH)
-		fprintf(fp, "'%c'", c);
-	else if(escin == EOF)
+	if(c == EOF) {
 		fprintf(fp, "EOF");
-	else
-		fprintf(fp, "'\\%c'", escin);
+	}
+	else {
+		NlexCharacter escin = nlex_get_counterpart(c, escout_c, escin_c);
+
+		if(escin == NAN_NOMATCH)
+			fprintf(fp, "'%c'", c);
+		else
+			fprintf(fp, "'\\%c'", escin);
+	}
 }
 
 static inline void

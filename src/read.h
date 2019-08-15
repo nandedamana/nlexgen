@@ -132,7 +132,7 @@ static inline void nlex_destroy_and_null(NlexHandle ** nhp, _Bool free_tokbuf)
 /* Find the counterpart of c of list1 in list2 */
 static inline int
 	nlex_get_counterpart
-		(const signed int c, const signed int * list1, const signed int * list2)
+		(const NlexCharacter c, const NlexCharacter * list1, const NlexCharacter * list2)
 {
 	const signed int *ptr;
 

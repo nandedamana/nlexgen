@@ -62,21 +62,26 @@ int nlex_next(NlexHandle * nh)
 	 * This helps tokenize strings directly.
 	 */
 	if(nh->fp) {
-		if(feof(nh->fp))
-			return EOF;
-
 		/* Cyclic buffer
 		 * (bufendptr is out of bound, so no memory wastage due to the following 
 		 * comparison)
 		 */
-		if(nh->bufptr == nh->bufendptr)
+		if(nh->bufptr == nh->bufendptr) {
+			/* This is the best place to check */
+			if(feof(nh->fp))
+				return EOF;
+
 			nh->bufptr = nh->buf;
+		}
 
 		/* Pointer at the beginning of the buffer means we have to read */
 		if(nh->bufptr == nh->buf) {
-			fread(nh->buf, nh->buflen, 1, nh->fp);
+			size_t bytes_read = fread(nh->buf, 1, nh->buflen, nh->fp);
 			if(ferror(nh->fp))
 				nh->on_error(nh, NLEX_ERR_READING);
+			
+			/* Again, points to the memory location next to the last character. */
+			nh->bufendptr = nh->buf + bytes_read;
 		}
 	}
 

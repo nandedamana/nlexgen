@@ -22,6 +22,7 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 		return;
 	}
 
+	/* TODO do I need to check this? */
 	if(root->first_child == NULL) /* Leaf node */
 		return;
 
@@ -37,15 +38,16 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 		if(childcount++ != 0) /* Not the first child */
 			fprintf(fpout, "else ");
 
-		if(tptr->ch >= 0) { /* Regular character; not a special case. */
+		if(tptr->ch >= 0) {   /* Regular character; not a special case. */
 			fprintf(fpout, "if(ch == ");
 			nan_c_print_character(tptr->ch, fpout);
 			fprintf(fpout, ") {\n");
 
 			/* First child itself is else means direct action.
 			 * Reading should be done in cases except this.
+			 * XXX No need to check if tptr->first_child is NULL because
 			 */
-			if(tptr->first_child->ch != NLEX_CASE_ELSE) {
+			if(tptr->first_child && tptr->first_child->ch != NLEX_CASE_ELSE) {
 				// XXX Calling indent() two times won't be useful if indent_level = 0
 				indent_level++;
 				indent();
@@ -89,10 +91,10 @@ int main()
 	NanTreeNode   troot;
 	NanTreeNode * tcurnode = &troot;
 
-	NlexHandle * nh;
-	int          ch;
-	_Bool        escaped = 0;
-	_Bool        in_list = 0; /* [] */
+	NlexHandle *  nh;
+	NlexCharacter ch;
+	_Bool         escaped = 0;
+	_Bool         in_list = 0; /* [] */
 
 	NanCharacterList * chlist;
 
@@ -100,7 +102,7 @@ int main()
 
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
-	troot.ch      = NLEX_CASE_ROOT;
+	troot.ch          = NLEX_CASE_ROOT;
 
 	nh = nlex_handle_new();
 	if(!nh)
@@ -255,7 +257,7 @@ int main()
 		if(!tmpnode)
 			die("malloc() error.");
 
-		tmpnode->ch   = ch;
+		tmpnode->ch  = ch;
 		/* No problem if chlist is invalid since
 		 * ch will not be NLEX_CASE_LIST in that case.
 		 */
