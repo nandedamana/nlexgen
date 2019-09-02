@@ -5,10 +5,14 @@
 #include "read.h"
 #include "tree.h"
 
-void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
+/* Returns 1 if the elsenode was used in a goto statement */
+_Bool nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 {
 	NanTreeNode * tptr;
 	int childcount = 0;
+	
+	NanTreeNode *elsenode_bak   = elsenode; /* Because can be overridden */
+	_Bool        goto_else_used = 0;
 
 	int i;
 
@@ -19,12 +23,12 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 		/* Child is an action node */
 		indent();
 		fprintf(fpout, "%s\n", (char *) root->first_child->ptr);
-		return;
+		return goto_else_used;
 	}
 
 	/* TODO do I need to check this? */
 	if(root->first_child == NULL) /* Leaf node */
-		return;
+		return goto_else_used;
 
 	/* Override elsenode if any of the children is a genuine else node */
 	for(tptr = root->first_child->sibling; tptr; tptr = tptr->sibling)
@@ -62,10 +66,13 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 				/* 'else' has already been printed */
 				/* TODO Small numbers instead of pointer values */
 				
-				if(tptr == root->first_child) /* Not real else, but action nodes */
-					fprintf(fpout, "{\n");
-				else
+				/* Don't worry, the else node will come only after all the siblings
+				 * that can use a goto.
+				 */
+				if(tptr == elsenode && goto_else_used)
 					fprintf(fpout, "{ state_%p:\n", tptr);
+				else
+					fprintf(fpout, "{\n");
 				break;
 			case NLEX_CASE_LIST:
 				fprintf(fpout, "if ("); /* 'else' has already been printed */
@@ -75,15 +82,21 @@ void nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
 			}
 		}
 		
-		nan_tree2code(tptr, elsenode, indent_level + 1); // TODO
+		goto_else_used = nan_tree2code(tptr, elsenode, indent_level + 1); // TODO
 
 		indent();
 
-		if(elsenode && tptr->sibling == NULL && tptr->ch != NLEX_CASE_ELSE)
+		if(elsenode && tptr->sibling == NULL && tptr->ch != NLEX_CASE_ELSE) {
 			fprintf(fpout, "} else goto state_%p;\n", elsenode);
-		else
+			if(elsenode == elsenode_bak)
+				goto_else_used = 1;
+		}
+		else {
 			fprintf(fpout, "}\n");
+		}
 	}
+	
+	return goto_else_used;
 }
 
 int main()
