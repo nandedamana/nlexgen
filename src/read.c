@@ -45,7 +45,7 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	nh->buf         = (char *) buf;
 
 	if(fpi) {
-		nh->buf       = nlex_malloc(nh, sizeof(NlexHandle));
+		nh->buf       = nlex_malloc(nh, nh->buflen);
 
 		/* Precalculate for efficient later comparisons.
 		 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
