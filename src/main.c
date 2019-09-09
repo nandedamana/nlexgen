@@ -76,7 +76,7 @@ int main()
 
 	nh = nlex_handle_new();
 	if(!nh)
-		die("nlex_handle_new() returned NULL.");
+		nlex_die("nlex_handle_new() returned NULL.");
 	
 	nlex_init(nh, stdin, NULL); // TODO FIXME not always stdin
 
@@ -129,14 +129,14 @@ int main()
 		 * But this ensures safety in case I change something.
 		 */
 		else if(ch == '\n' || ch == 0 || ch == EOF)
-			die("No action given for a token."); // TODO line and col
+			nlex_die("No action given for a token."); // TODO line and col
 
 		if(escaped) {
 			ch = nlex_get_counterpart(ch, escin, escout);
 			if(ch != NAN_NOMATCH)
 				escaped = 0;
 			else
-				die("Unknown escape sequence."); // TODO line and col
+				nlex_die("Unknown escape sequence."); // TODO line and col
 		}
 		else {
 			if(ch == '\\') {
@@ -145,7 +145,7 @@ int main()
 			}
 			else if(ch == '[') {
 				if(in_list)
-					die("List inside list."); // TODO line and col
+					nlex_die("List inside list."); // TODO line and col
 
 				chlist  = nan_character_list_new();
 				in_list = 1;
@@ -153,7 +153,7 @@ int main()
 			}
 			else if(ch == ']') {
 				if(!in_list)
-					die("Closing a list that was never open."); // TODO line and col
+					nlex_die("Closing a list that was never open."); // TODO line and col
 
 				in_list = 0;
 				ch      = -NLEX_CASE_LIST;
@@ -161,12 +161,12 @@ int main()
 			}
 			else if(ch == '*') { /* Kleene star */
 				if(tcurnode == &troot)
-					die("Kleene star without any preceding character."); // TODO line and col
+					nlex_die("Kleene star without any preceding character."); // TODO line and col
 
 				/* tcurnode points to the last added node */
 
 				if(tcurnode->ch < 0 && !(-(tcurnode->ch) & NLEX_CASE_LIST)) {
-					die("Kleene star is allowed for single characters and lists only."); // TODO line and col
+					nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
 				}
 
 				/* Check if curnode has children. If no, 'a' was not used before 'a*';
@@ -305,7 +305,7 @@ int main()
 	/* END Tree Construction */
 
 	if(in_list)
-		die("List opened but not closed."); // TODO line and col
+		nlex_die("List opened but not closed."); // TODO line and col
 
 	/* BEGIN Code Generation */
 

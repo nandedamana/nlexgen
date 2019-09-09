@@ -100,7 +100,7 @@ static inline void * nlex_malloc(NlexHandle * nh, size_t size)
 		if(nh)
 			nh->on_error(nh, NLEX_ERR_MALLOC);
 		else
-			die("malloc() error.");
+			nlex_die("malloc() error.");
 	}
 	
 	return newptr;
@@ -116,7 +116,7 @@ static inline void * nlex_realloc(NlexHandle * nh, void * ptr, size_t size)
 		if(nh)
 			nh->on_error(nh, NLEX_ERR_REALLOC);
 		else
-			die("realloc() error.");
+			nlex_die("realloc() error.");
 	}	
 
 	return newptr;

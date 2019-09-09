@@ -63,7 +63,7 @@ static inline void
 	// TODO use nlex_realloc()?
 	ncl->list = realloc(ncl->list, sizeof(NlexCharacter) * (ncl->count + 1));
 	if(!ncl->list)
-		die("realloc() error.");
+		nlex_die("realloc() error.");
 
 	ncl->list[ncl->count++] = c;
 }
@@ -73,7 +73,7 @@ static inline NanCharacterList * nan_character_list_new()
 	// TODO use nlex_malloc()?
 	NanCharacterList * ncl = malloc(sizeof(NanCharacterList));
 	if(!ncl)
-		die("malloc() error.");
+		nlex_die("malloc() error.");
 	
 	ncl->count = 0;
 	ncl->list  = NULL;

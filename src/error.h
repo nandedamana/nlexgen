@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-static inline void die(const char *msg) {
+static inline void nlex_die(const char *msg) {
 	fflush(stdout);
 	fprintf(stderr, "nlexgen ERROR: %s\n", msg);
 	exit(1);
