@@ -10,8 +10,8 @@
 FILE * fpout;
 
 /* Includes the escaping of special chars used by the lexgen */
-const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '#', '[', ']', 'Z',  NAN_NOMATCH};
-const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '#', '[', ']',  EOF, NAN_NOMATCH};
+const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '#', '[', ']', '*', 'Z',  NAN_NOMATCH};
+const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '#', '[', ']', '*', EOF, NAN_NOMATCH};
 #endif
 
 /* For C output */
@@ -54,6 +54,11 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	}
 
 	nh->bufptr      = nh->buf;
+
+	nh->tstack     = NULL;
+	nh->nstack_top = -1;
+	nh->nstack     = NULL;
+	nh->tstack_top = -1;
 }
 
 int nlex_next(NlexHandle * nh)

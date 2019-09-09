@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "error.h"
+
 #define NLEX_DEFT_BUFSIZE   4096
 #define NLEX_DEFT_TBUF_UNIT 32
 
@@ -46,19 +48,30 @@ typedef struct _NlexHandle {
 	FILE * fp;
 	char * buf;          /* Cyclic buffer */
 	
+	/* Set/modified by the lexer several times */
+	
 	/* bufptr usually points to the next character to read,
 	 * but not while at the end of the buffer due to the cyclic nature.
 	 */
 	char * bufptr;
-
 	char * bufendptr;
 	
-	/* Set by nlex_tokrec_init() */
+	size_t curstate;
+	
+	/* 'this stack' and 'next stack' (stacks holding the states for
+	 * this iteration and the next.
+	 * size_t chosen because currently states are identified using compile-time
+	 * addresses.
+	 */
+	size_t * tstack;
+	size_t   tstack_top;
+	size_t * nstack;
+	size_t   nstack_top;
+	
+	/* Set by nlex_tokrec_init() and modified during runtime */
 	char * tokbuf;       /* Not cyclic */
 	char * tokbufptr;
 	char * tokbufendptr;
-
-	/* Set by the lexer */
 	size_t tokbuflen;
 	
 	/* For custom data (will not be initialized to NULL by nlex_*()) */
@@ -83,8 +96,12 @@ static inline void * nlex_malloc(NlexHandle * nh, size_t size)
 	void * newptr;
 	
 	newptr = malloc(size);
-	if(!newptr)
-		nh->on_error(nh, NLEX_ERR_MALLOC);
+	if(!newptr) {
+		if(nh)
+			nh->on_error(nh, NLEX_ERR_MALLOC);
+		else
+			die("malloc() error.");
+	}
 	
 	return newptr;
 }
@@ -95,9 +112,13 @@ static inline void * nlex_realloc(NlexHandle * nh, void * ptr, size_t size)
 	void * newptr;
 	
 	newptr = realloc(ptr, size);
-	if(!newptr)
-		nh->on_error(nh, NLEX_ERR_REALLOC);
-	
+	if(!newptr) {
+		if(nh)
+			nh->on_error(nh, NLEX_ERR_REALLOC);
+		else
+			die("realloc() error.");
+	}	
+
 	return newptr;
 }
 
@@ -154,9 +175,37 @@ static inline char nlex_last(NlexHandle * nh)
 	return *(nh->bufptr - 1);
 }
 
+static inline _Bool nlex_nstack_is_empty(NlexHandle * nh)
+{
+	return (nh->nstack_top == -1);
+}
+
+static inline void nlex_nstack_push(NlexHandle * nh, size_t id)
+{
+	nh->nstack_top++;
+	nh->nstack =
+		nlex_realloc(nh, nh->nstack, sizeof(size_t) * (nh->nstack_top + 1));
+	nh->nstack[nh->nstack_top] = id;
+}
+
 int nlex_next(NlexHandle * nh);
 
 void nlex_onerror(NlexHandle * nh, int errno);
+
+static inline void nlex_swap_t_n_stacks(NlexHandle * nh)
+{
+	size_t * ptmp;
+	size_t   stmp;
+
+	ptmp = nh->tstack;
+	stmp = nh->tstack_top;
+	
+	nh->tstack     = nh->nstack;
+	nh->tstack_top = nh->nstack_top;
+	
+	nh->nstack     = ptmp;
+	nh->nstack_top = stmp;
+}
 
 void nlex_tokbuf_append(NlexHandle * nh, const char c);
 
@@ -172,5 +221,26 @@ void nlex_tokrec_init(NlexHandle * nh);
 static inline void nlex_tokrec_finish(NlexHandle * nh)
 {
 	*(nh->tokbufptr) = '\0';
+}
+
+static inline _Bool nlex_tstack_is_empty(NlexHandle * nh)
+{
+	return (nh->tstack_top == -1);
+}
+
+static inline size_t nlex_tstack_pop(NlexHandle * nh)
+{
+	size_t id = nh->tstack[nh->tstack_top--];
+
+	if(nh->tstack_top != -1) {
+		nh->tstack =
+			nlex_realloc(nh, nh->tstack, sizeof(size_t) * (nh->tstack_top + 1));
+	}
+	else {
+		free(nh->tstack);
+		nh->tstack = NULL;
+	}
+
+	return id;
 }
 #endif

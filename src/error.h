@@ -10,7 +10,7 @@
 
 static inline void die(const char *msg) {
 	fflush(stdout);
-	fprintf(stderr, "ERROR: %s\n", msg);
+	fprintf(stderr, "nlexgen ERROR: %s\n", msg);
 	exit(1);
 }
 

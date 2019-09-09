@@ -2,107 +2,71 @@
  * Started on 2019-07-22
  */
 
+#include <memory.h>
+
 #include "read.h"
 #include "tree.h"
 
-/* Returns 1 if the elsenode was used in a goto statement */
-_Bool nan_tree2code(NanTreeNode *root, NanTreeNode *elsenode, int indent_level)
+void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 {
 	NanTreeNode * tptr;
-	int childcount = 0;
-	
-	NanTreeNode *elsenode_bak   = elsenode; /* Because can be overridden */
-	_Bool        goto_else_used = 0;
-
-	int i;
-
-	// TODO precreate a padding string
-	#define indent(); for(i = 0; i < indent_level; i++) fputc(' ', fpout);
 
 	if(root->ch == NLEX_CASE_ELSE) {
-		/* Child is an action node */
-		indent();
-		fprintf(fpout, "%s\n", (char *) root->first_child->ptr);
-		return goto_else_used;
+		fprintf(fpout, "%s\n", (char *) root->ptr);
+		return;
 	}
 
-	/* TODO do I need to check this? */
-	if(root->first_child == NULL) /* Leaf node */
-		return goto_else_used;
-
-	/* Override elsenode if any of the children is a genuine else node */
-	for(tptr = root->first_child->sibling; tptr; tptr = tptr->sibling)
-		if(tptr->ch == NLEX_CASE_ELSE)
-			elsenode = tptr;
-			/* No need of manual break since there will be no nodes after an else */
-
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		indent();
+		fprintf(fpout, "if((nh->curstate == %p", root);
 
-		if(childcount++ != 0) /* Not the first child */
-			fprintf(fpout, "else ");
+		/* Bypass */
+		if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE)
+			fprintf(fpout, " || nh->curstate == %p", grandparent);
+		
+		/* Self loop */
+		if(tptr->ch < 0 && -(tptr->ch) & NLEX_CASE_KLEENE)
+			fprintf(fpout, " || nh->curstate == %p", tptr);
 
-		if(tptr->ch >= 0) {   /* Regular character; not a special case. */
-			fprintf(fpout, "if(ch == ");
+		if(tptr->ch >= 0) { /* Regular character; not a special case. */
+			fprintf(fpout, ") && ch == ");
 			nan_c_print_character(tptr->ch, fpout);
+		}
+		else if(-(tptr->ch) & NLEX_CASE_LIST) {
+			fprintf(fpout, ") && ");
+			nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
+		}
+
+		if(tptr->ch != NLEX_CASE_ELSE) {
 			fprintf(fpout, ") {\n");
 
-			/* First child itself is else means direct action.
-			 * Reading should be done in cases except this.
-			 * XXX No need to check if tptr->first_child is NULL because
-			 */
-			if(tptr->first_child && tptr->first_child->ch != NLEX_CASE_ELSE) {
-				// XXX Calling indent() two times won't be useful if indent_level = 0
-				indent_level++;
-				indent();
-				indent_level--;
-
-				fprintf(fpout, "ch = nlex_next(nh);\n");
-			}
-		}
-		else { /* Special cases */
-			switch(tptr->ch) {
-			case NLEX_CASE_ELSE:
-				/* 'else' has already been printed */
-				/* TODO Small numbers instead of pointer values */
-				
-				/* Don't worry, the else node will come only after all the siblings
-				 * that can use a goto.
-				 */
-				if(tptr == elsenode && goto_else_used)
-					fprintf(fpout, "{ state_%p:\n", tptr);
-				else
-					fprintf(fpout, "{\n");
-				break;
-			case NLEX_CASE_LIST:
-				fprintf(fpout, "if ("); /* 'else' has already been printed */
-				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
-				fprintf(fpout, ") {\n");
-				break;
-			}
-		}
-		
-		goto_else_used = nan_tree2code(tptr, elsenode, indent_level + 1); // TODO
-
-		indent();
-
-		if(elsenode && tptr->sibling == NULL && tptr->ch != NLEX_CASE_ELSE) {
-			fprintf(fpout, "} else goto state_%p;\n", elsenode);
-			if(elsenode == elsenode_bak)
-				goto_else_used = 1;
+			/* Push itself onto the next-stack */
+			fprintf(fpout, "\tnlex_nstack_push(nh, %p);\n", tptr);
+			fprintf(fpout, "}\n");
+			nan_tree2code(tptr, root);
 		}
 		else {
+			fprintf(fpout, ")) {\n");
+
+			/* nlex_nstack_is_empty() = true means
+			 * no other cases were successful.
+			 */
+//			fprintf(fpout,
+			// TODO FIXME
+//					"if(nh->curstate == %p && nlex_nstack_is_empty(nh)) {\n",
+
+			nan_tree2code(tptr, root);
 			fprintf(fpout, "}\n");
 		}
 	}
 	
-	return goto_else_used;
+	return;
 }
 
 int main()
 {
 	NanTreeNode   troot;
 	NanTreeNode * tcurnode = &troot;
+	NanTreeNode * tcurnode_parent;
 
 	NlexHandle *  nh;
 	NlexCharacter ch;
@@ -141,40 +105,29 @@ int main()
 			}
 
 			/* Now we have to create an action node. The action node is always
-			 * the child of an else node, even if there is no 'if' part.
-			 * This is for later convenience (from addition of more cases
-			 * to conversion).
-			 * So two nodes have to be created: an else node and an action node.
-			 * But no need of a new else node if the current node is already an else
-			 * node (explicit else specified by the user using #else)
+			 * an else node, even if there is no 'if' part.
+			 * This is for later convenience
+			 * (think about else node as a 'default' node).
 			 */
 
-			/* BEGIN Create the action node */
-			NanTreeNode *anode = malloc(sizeof(NanTreeNode));
-			if(!anode)
-				die("malloc() error.");
-
-			/* Copy the action. */
-			anode->ptr = nh->tokbuf;
-			/* Nobody cares about first_child or sibling of an action node. */
-
-			/* END Create the action node */
-
-			/* BEGIN Attach the action node to the tree */
+			/* BEGIN Create/attach the action node to the tree */
 			if(tcurnode->ch == NLEX_CASE_ELSE) {
-				/* The current node is already an else */
+				/* The current node is already an else (explicit #else) */
 				
-				tcurnode->first_child = anode;
+				/* Copy the action. */
+				tcurnode->ptr = (void *) nh->tokbuf;
 			}
 			else {
-				NanTreeNode *enode = malloc(sizeof(NanTreeNode));
-				if(!enode)
-					die("malloc() error.");
+				NanTreeNode *enode = nlex_malloc(NULL, sizeof(NanTreeNode));
 
-				enode->ch          = NLEX_CASE_ELSE;
-				enode->first_child = anode;
-				enode->sibling     = NULL;
+				enode->ch  = NLEX_CASE_ELSE;
+//				enode->sibling     = NULL; TODO REM if not needed
 
+				/* Copy the action. */
+				enode->ptr = (void *) nh->tokbuf;
+				/* Nobody cares about first_child or sibling of an action node. */
+				
+				/* Now attach */
 				tcurnode->first_child = enode;
 			}
 			/* END Attach the action node to the tree */			
@@ -218,6 +171,69 @@ int main()
 				in_list = 0;
 				ch = NLEX_CASE_LIST;
 				/* Go on; the list will be added to the tree. */
+			}
+			else if(ch == '*') { /* Kleene star */
+				if(tcurnode == &troot)
+					die("Kleene star without any preceding character."); // TODO line and col
+
+				/* tcurnode points to the last added node */
+
+				if(tcurnode->ch < 0 && !(-(tcurnode->ch) & NLEX_CASE_LIST)) {
+					die("Kleene star is allowed for single characters and lists only."); // TODO line and col
+				}
+
+				/* Check if curnode has children. If no, 'a' was not used before 'a*';
+				 * this means I can directly use it.
+				 * Otherwise, I have to create a sibling.
+				 */
+				
+				if(tcurnode->first_child == NULL) {
+					/* Simply convert it to a Kleene */
+					nan_tree_node_convert_to_kleene(tcurnode);
+				}
+				else {
+					/* Look for a sibling that has the same content but is a Kleene.
+					 * If not found,
+					 * create a copy, convert it to Kleene and add as sibling.
+					 */
+					
+					NanTreeNode * tptr;
+					NanTreeNode * match = NULL;
+					
+					for(tptr = tcurnode_parent->first_child; tptr; tptr = tptr->sibling) {
+						if(tptr == tcurnode)
+							continue;
+						
+						if(nan_tree_nodes_match(tptr, tcurnode) &&
+							-(tptr->ch) & NLEX_CASE_KLEENE)
+						{
+							match = tptr;
+							break;
+						}
+					}
+					
+					if(match) { /* Kleene sibling found */
+						tcurnode = tptr;
+						continue;
+					}
+					else { /* Kleene sibling NOT found */
+						/* Clone and make it Kleene */
+						
+						tptr = nlex_malloc(NULL, sizeof(NanTreeNode));
+						memcpy(tptr, tcurnode, sizeof(NanTreeNode));
+						
+						nan_tree_node_convert_to_kleene(tptr);
+						
+						tptr->first_child = NULL;
+						tptr->sibling = tcurnode->sibling;
+						tcurnode->sibling = tptr;
+						
+						tcurnode = tptr;
+					}
+				}
+
+				/* Skipping the rest because no new node is to be added */
+				continue;
 			}
 			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
 				if(in_list)
@@ -266,9 +282,7 @@ int main()
 		NanTreeNode * tptr;
 		
 		/* A temporary node to make the comparison easier */
-		NanTreeNode * tmpnode = malloc(sizeof(NanTreeNode));
-		if(!tmpnode)
-			die("malloc() error.");
+		NanTreeNode * tmpnode = nlex_malloc(NULL, sizeof(NanTreeNode));
 
 		tmpnode->ch  = ch;
 		/* No problem if chlist is invalid since
@@ -281,7 +295,9 @@ int main()
 		for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling) {
 			tptr_prv = tptr;
 
-			if(nan_tree_nodes_match(tptr, tmpnode)) {
+			if( nan_tree_nodes_match(tptr, tmpnode) &&
+				(tptr->ch >= 0 || !(-(tptr->ch) & NLEX_CASE_KLEENE)) ) /* Not a Kleene */
+			{
 				tmatching_node = tptr;
 				break;
 			}
@@ -290,14 +306,12 @@ int main()
 		free(tmpnode);
 
 		if(tmatching_node) {
-			tcurnode = tmatching_node;
+			tcurnode_parent = tcurnode;
+			tcurnode        = tmatching_node;
 		}
 		else { /* Create a new node */
-			NanTreeNode * newnode = malloc(sizeof(NanTreeNode));
-			if(!newnode)
-				die("malloc() error.");
-			
-			newnode->ch          = ch;
+			NanTreeNode * newnode = nlex_malloc(NULL, sizeof(NanTreeNode));
+			newnode->ch           = ch;
 			
 			/* Again, no problem if chlist is invalid since
 			 * ch will not be NLEX_CASE_LIST in that case.
@@ -313,33 +327,20 @@ int main()
 			 * 2.1) The last child is an else node
 			 * 2.2) The last child is a non-else node
 			 */
-
-			/* If the last child is an action node, convert it to an else node.
-			 * If the last child is already an else node, the new character node
-			 * has to be added before it.
-			 */
-			
+	
 			if(tptr_prv == NULL) {
 				/* Case: tcurnode has no children yet */
-
 				tcurnode->first_child = newnode;
 			}
-			else if(tptr_prv->ch == NLEX_CASE_ELSE) {
-				/* Case: Last child is an else node */
-				/* The insertion has to be made before this node */
-				
-				NanTreeNode ** tptrptr = &(tcurnode->first_child);
-				while((*tptrptr)->sibling == tptr_prv)
-					tptrptr = &((*tptrptr)->sibling);
-				
-				/* Now tptrptr is a pointer to the pointer to the else node. */
-				newnode->sibling = tptr_prv;
-				*tptrptr = newnode;
-			}
 			else {
-				/* Case: Last child is a non-else node */
-
-				tptr_prv->sibling = newnode;
+				if(newnode->ch != NLEX_CASE_ELSE) {
+					/* Prepend */
+					newnode->sibling      = tcurnode->first_child;
+					tcurnode->first_child = newnode;
+				}
+				else {
+					tptr_prv->sibling = newnode;
+				}
 			}
 			
 			/* For the next character, this node will be the parent */
@@ -353,7 +354,17 @@ int main()
 
 	/* BEGIN Code Generation */
 
-	nan_tree2code(&troot, NULL, 0);
+	// TODO goto label for the root
+
+	fprintf(fpout, "nlex_nstack_push(nh, %p);\n", &troot);	
+	fprintf(fpout,
+		"while(!nlex_nstack_is_empty(nh)) {\n"
+		"nlex_swap_t_n_stacks(nh);\n"
+		"ch = nlex_next(nh);\n"
+		"while(!nlex_tstack_is_empty(nh) && "
+		"(nh->curstate = nlex_tstack_pop(nh))) {\n");
+	nan_tree2code(&troot, NULL);
+	fprintf(fpout, "\n}\n}\n");
 
 	/* END Code Generation */
 
