@@ -10,8 +10,8 @@
 FILE * fpout;
 
 /* Includes the escaping of special chars used by the lexgen */
-const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '#', '[', ']', '*', 'Z',  NAN_NOMATCH};
-const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '#', '[', ']', '*', EOF, NAN_NOMATCH};
+const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '[', ']', '*', 'Z',  NAN_NOMATCH};
+const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '[', ']', '*', EOF, NAN_NOMATCH};
 #endif
 
 /* For C output */

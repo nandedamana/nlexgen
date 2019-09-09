@@ -4,12 +4,12 @@
 
 #include "error.h"
 
-#define NLEX_CASE_NONE   -1
-#define NLEX_CASE_ROOT   -2
-#define NLEX_CASE_ELSE   -4
+#define NLEX_CASE_NONE -1
+#define NLEX_CASE_ROOT -2
+#define NLEX_CASE_ACT  -4
 
 /* Will be negated. */
-#define NLEX_CASE_LIST   8
+#define NLEX_CASE_LIST  8
 
 /* Will be ORed with NanTreeNode.ch for lists.
  * Single character nodes will be converted to lists to enable Kleene.
@@ -25,7 +25,7 @@
 typedef struct _NanTreeNode {
   NlexCharacter         ch;
 
-	/* If ch is NLEX_CASE_ELSE, ptr points to the user-given output code.
+	/* If ch is NLEX_CASE_ACT, ptr points to the user-given output code.
 	 * If ch is NLEX_CASE_LIST, ptr points to the a NanCharacterList.
 	 * Otherwise unused and may hold junk value.
 	 */

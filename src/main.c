@@ -11,7 +11,7 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 {
 	NanTreeNode * tptr;
 
-	if(root->ch == NLEX_CASE_ELSE) {
+	if(root->ch == NLEX_CASE_ACT) {
 		fprintf(fpout, "%s\n", (char *) root->ptr);
 		return;
 	}
@@ -28,16 +28,16 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 			fprintf(fpout, " || nh->curstate == %p", tptr);
 
 		if(tptr->ch >= 0) { /* Regular character; not a special case. */
-			fprintf(fpout, ") && ch == ");
+			fprintf(fpout, ") && (ch == ");
 			nan_c_print_character(tptr->ch, fpout);
 		}
 		else if(-(tptr->ch) & NLEX_CASE_LIST) {
-			fprintf(fpout, ") && ");
+			fprintf(fpout, ") && (");
 			nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
 		}
 
-		if(tptr->ch != NLEX_CASE_ELSE) {
-			fprintf(fpout, ") {\n");
+		if(tptr->ch != NLEX_CASE_ACT) {
+			fprintf(fpout, ")) {\n");
 
 			/* Push itself onto the next-stack */
 			fprintf(fpout, "\tnlex_nstack_push(nh, %p);\n", tptr);
@@ -46,13 +46,6 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 		}
 		else {
 			fprintf(fpout, ")) {\n");
-
-			/* nlex_nstack_is_empty() = true means
-			 * no other cases were successful.
-			 */
-//			fprintf(fpout,
-			// TODO FIXME
-//					"if(nh->curstate == %p && nlex_nstack_is_empty(nh)) {\n",
 
 			nan_tree2code(tptr, root);
 			fprintf(fpout, "}\n");
@@ -104,14 +97,8 @@ int main()
 				nlex_tokbuf_append(nh, ch);
 			}
 
-			/* Now we have to create an action node. The action node is always
-			 * an else node, even if there is no 'if' part.
-			 * This is for later convenience
-			 * (think about else node as a 'default' node).
-			 */
-
 			/* BEGIN Create/attach the action node to the tree */
-			if(tcurnode->ch == NLEX_CASE_ELSE) {
+			if(tcurnode->ch == NLEX_CASE_ACT) {
 				/* The current node is already an else (explicit #else) */
 				
 				/* Copy the action. */
@@ -120,7 +107,7 @@ int main()
 			else {
 				NanTreeNode *enode = nlex_malloc(NULL, sizeof(NanTreeNode));
 
-				enode->ch  = NLEX_CASE_ELSE;
+				enode->ch  = NLEX_CASE_ACT;
 //				enode->sibling     = NULL; TODO REM if not needed
 
 				/* Copy the action. */
@@ -169,7 +156,7 @@ int main()
 					die("Closing a list that was never open."); // TODO line and col
 
 				in_list = 0;
-				ch = NLEX_CASE_LIST;
+				ch      = -NLEX_CASE_LIST;
 				/* Go on; the list will be added to the tree. */
 			}
 			else if(ch == '*') { /* Kleene star */
@@ -234,38 +221,6 @@ int main()
 
 				/* Skipping the rest because no new node is to be added */
 				continue;
-			}
-			else if(ch == '#') { /* Unescaped '#' means the start of a case spec. */
-				if(in_list)
-					die("Special cases are not permitted inside lists."); // TODO line and col
-
-				/* Directly assigning to ch will be confusing */
-				int specialcase = NLEX_CASE_NONE;
-			
-				ch = nlex_next(nh);
-				if(ch == 'e') {
-					ch = nlex_next(nh);
-					if(ch == 'l') {
-						ch = nlex_next(nh);
-						if(ch == 's') {
-							ch = nlex_next(nh);
-							if(ch == 'e') {
-								ch = nlex_next(nh);
-								if(ch == ' ' || ch == '\t') {
-									specialcase = NLEX_CASE_ELSE;
-								}
-							}
-						}
-					}
-				}
-
-				if(specialcase == NLEX_CASE_NONE) {
-					die("Unknown or incomplete case specification.");
-				}
-				else {
-					ch = specialcase;
-					nlex_back(nh); /* Back to the separator */
-				}
 			}
 		}
 
@@ -333,7 +288,7 @@ int main()
 				tcurnode->first_child = newnode;
 			}
 			else {
-				if(newnode->ch != NLEX_CASE_ELSE) {
+				if(newnode->ch != NLEX_CASE_ACT) {
 					/* Prepend */
 					newnode->sibling      = tcurnode->first_child;
 					tcurnode->first_child = newnode;
