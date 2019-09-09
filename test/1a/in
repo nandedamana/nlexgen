@@ -1,4 +1,6 @@
 \n              { continue; }
+a*              { token = NAN_TOK_CSTAR; }
+[cd]*           { token = NAN_TOK_LSTAR; }
 hello[\t \0\Z]  { token = NAN_TOK_HELLO; }
 hi[\t \0\Z]     { token = NAN_TOK_HI;    }
 #else           { fprintf(stderr, "HERE!\n"); token = NAN_TOK_NONE;  }

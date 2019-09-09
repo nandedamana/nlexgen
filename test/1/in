@@ -1,2 +1,2 @@
-hello  { token = NAN_TOK_HELLO; }
-hi     { token = NAN_TOK_HI;    }
+he*llo { token = NAN_TOK_HELLO; }
+hei    { token = NAN_TOK_HI;    }

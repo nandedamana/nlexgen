@@ -7,6 +7,8 @@
 #define NAN_TOK_NONE       0
 #define NAN_TOK_HELLO      1
 #define NAN_TOK_HI         2
+#define NAN_TOK_CSTAR      3
+#define NAN_TOK_LSTAR      4
 
 int main()
 {

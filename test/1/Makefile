@@ -1,4 +1,4 @@
-CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
+CFLAGS=-Wall -std=c99
 
 default:lexer
 

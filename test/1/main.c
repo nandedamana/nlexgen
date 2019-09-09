@@ -11,7 +11,7 @@
 
 int main()
 {
-	fpout = stdout;
+	FILE * fpout = stdout;
 	
 	int token;
 	char ch;
@@ -25,7 +25,9 @@ int main()
 	nlex_init(nh, stdin, NULL);	
 
 	while(1) {
-		ch = nlex_next(nh);
+		token = NAN_TOK_NONE;
+
+		#include "lexbranch.c"
 		
 		if(ch == ' ' || ch == '\n' || ch == 0 || ch == EOF) { /* Separator */
 			if(token != NAN_TOK_NONE)
@@ -49,10 +51,6 @@ int main()
 
 			continue;
 		}		
-		
-		token = NAN_TOK_NONE;
-
-		#include "lexbranch.c"
 	}
 
 	return 0;
