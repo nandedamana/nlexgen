@@ -7,25 +7,30 @@
 #include "read.h"
 #include "tree.h"
 
+NanTreeNodeId id_lastact    = 0;
+NanTreeNodeId id_lastnonact = 0;
+
 void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 {
 	NanTreeNode * tptr;
 
 	if(root->ch == NLEX_CASE_ACT) {
-		fprintf(fpout, "%s\n", (char *) root->ptr);
+		fprintf(fpout, "if(nh->curstate == %d) {\n%s\n}\n",
+			nan_tree_node_id(root),
+			(char *) root->ptr);
 		return;
 	}
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		fprintf(fpout, "if((nh->curstate == %p", root);
+		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));
 
 		/* Bypass */
 		if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE)
-			fprintf(fpout, " || nh->curstate == %p", grandparent);
+			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(grandparent));
 		
 		/* Self loop */
 		if(tptr->ch < 0 && -(tptr->ch) & NLEX_CASE_KLEENE)
-			fprintf(fpout, " || nh->curstate == %p", tptr);
+			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(tptr));
 
 		if(tptr->ch >= 0) { /* Regular character; not a special case. */
 			fprintf(fpout, ") && (ch == ");
@@ -41,20 +46,12 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 			}
 		}
 
-		if(tptr->ch != NLEX_CASE_ACT) {
-			fprintf(fpout, ")) {\n");
+		fprintf(fpout, ")) {\n");
 
-			/* Push itself onto the next-stack */
-			fprintf(fpout, "\tnlex_nstack_push(nh, %p);\n", tptr);
-			fprintf(fpout, "}\n");
-			nan_tree2code(tptr, root);
-		}
-		else {
-			fprintf(fpout, ")) {\n");
-
-			nan_tree2code(tptr, root);
-			fprintf(fpout, "}\n");
-		}
+		/* Push itself onto the next-stack */
+		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		fprintf(fpout, "}\n");
+		nan_tree2code(tptr, root);
 	}
 	
 	return;
@@ -78,6 +75,7 @@ int main()
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
 	troot.ch          = NLEX_CASE_ROOT;
+	troot.id          = 1;
 
 	nh = nlex_handle_new();
 	if(!nh)
@@ -110,17 +108,17 @@ int main()
 				tcurnode->ptr = (void *) nh->tokbuf;
 			}
 			else {
-				NanTreeNode *enode = nlex_malloc(NULL, sizeof(NanTreeNode));
-
-				enode->ch  = NLEX_CASE_ACT;
-//				enode->sibling     = NULL; TODO REM if not needed
+				NanTreeNode *anode = nlex_malloc(NULL, sizeof(NanTreeNode));
+				anode->id = 0;
+				anode->ch = NLEX_CASE_ACT;
+//				anode->sibling     = NULL; TODO REM if not needed
 
 				/* Copy the action. */
-				enode->ptr = (void *) nh->tokbuf;
+				anode->ptr = (void *) nh->tokbuf;
 				/* Nobody cares about first_child or sibling of an action node. */
 				
 				/* Now attach */
-				tcurnode->first_child = enode;
+				tcurnode->first_child = anode;
 			}
 			/* END Attach the action node to the tree */			
 
@@ -177,11 +175,11 @@ int main()
 
 				/* tcurnode points to the last added node */
 
+				/* TODO should be modified considering the introduction of dot and other features (if any).
 				if(tcurnode->ch < 0 && !(-(tcurnode->ch) & NLEX_CASE_LIST)) {
-					// TODO FIXME
-					fprintf(stderr, "%d\n", tcurnode->ch);
-					//nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
+					nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
 				}
+				*/
 
 				/* Check if curnode has children. If no, 'a' was not used before 'a*';
 				 * this means I can directly use it.
@@ -225,6 +223,7 @@ int main()
 						
 						nan_tree_node_convert_to_kleene(tptr);
 						
+						tptr->id          = 0;
 						tptr->first_child = NULL;
 						tptr->sibling = tcurnode->sibling;
 						tcurnode->sibling = tptr;
@@ -280,6 +279,7 @@ int main()
 		}
 		else { /* Create a new node */
 			NanTreeNode * newnode = nlex_malloc(NULL, sizeof(NanTreeNode));
+			newnode->id           = 0;
 			newnode->ch           = ch;
 			
 			/* Again, no problem if chlist is invalid since
@@ -323,14 +323,16 @@ int main()
 
 	/* BEGIN Code Generation */
 	
-	/* // TODO only for debugging
-	nan_tree_dump(&troot, 0);
-	fprintf(stderr, "tree dump complete.\n");
-	*/
+	// TODO FIXME
+	if(0) {
+		nan_tree_dump(&troot, 0);
+		fprintf(stderr, "tree dump complete.\n");
+	}
 
-	fprintf(fpout, "nlex_nstack_push(nh, %p);\n", &troot);	
+	fprintf(fpout, "nlex_nstack_push(nh, %d);\n", troot.id);
 	fprintf(fpout,
 		"while(!nlex_nstack_is_empty(nh)) {\n"
+		"nlex_nstack_remove_lowprio_actions(nh);\n"
 		"nlex_swap_t_n_stacks(nh);\n"
 		"ch = nlex_next(nh);\n"
 		"while(!nlex_tstack_is_empty(nh) && "

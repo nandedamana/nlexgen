@@ -23,7 +23,13 @@
  * the components that can be used by other programs.
  */
 
+// TODO avoid redefinition
+// TODO smaller size
+typedef unsigned int NanTreeNodeId;
+
 typedef struct _NanTreeNode {
+	NanTreeNodeId         id;
+
   NlexCharacter         ch;
 
 	/* If ch is NLEX_CASE_ACT, ptr points to the user-given output code.
@@ -41,6 +47,9 @@ typedef struct _NanCharacterList {
 	NlexCharacter * list;
 	size_t          count;
 } NanCharacterList;
+
+extern NanTreeNodeId id_lastact;
+extern NanTreeNodeId id_lastnonact;
 
 /* Print a character to the C source code output with escaping if needed */
 static inline void nan_c_print_character(NlexCharacter c, FILE * fp)
@@ -126,6 +135,22 @@ static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
 	}
 
 	node->ch = -(-(node->ch) | NLEX_CASE_KLEENE);
+}
+
+static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
+{
+	/* Make the action node ids odd and others even.
+	 * This is for easy identification at runtime.
+	 */
+	
+	if(node->id == 0) {
+		if(node->ch == NLEX_CASE_ACT)
+			node->id = ((++id_lastact) * 2) + 1;
+		else
+			node->id = ((++id_lastnonact) * 2);
+	}
+
+	return node->id;
 }
 
 /* TODO FIXME This comparison is order-sensitive for lists. */
@@ -217,7 +242,7 @@ static inline void nan_tree_dump(NanTreeNode * root, signed int level)
 	for(i = 0; i < level; i++)
 		fprintf(stderr, "-");
 
-	fprintf(stderr, " ch=%d (%p)\n", root->ch, root);
+	fprintf(stderr, " ch=%d (%p; id = %d)\n", root->ch, root, nan_tree_node_id(root));
 
 	level++;
 

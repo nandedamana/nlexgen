@@ -6,6 +6,7 @@
 #ifndef _N96E_LEX_READ_H
 #define _N96E_LEX_READ_H
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,6 +29,9 @@ typedef enum _NlexError {
 	NLEX_ERR_REALLOC,
 	NLEX_ERR_READING
 } NlexError;
+
+// TODO avoid redefinition
+typedef unsigned int NanTreeNodeId;
 
 typedef struct _NlexHandle {
 	/* Parameters that can only be set before calling nlex_init()
@@ -63,10 +67,10 @@ typedef struct _NlexHandle {
 	 * size_t chosen because currently states are identified using compile-time
 	 * addresses.
 	 */
-	size_t * tstack;
-	size_t   tstack_top;
-	size_t * nstack;
-	size_t   nstack_top;
+	NanTreeNodeId * tstack;
+	size_t          tstack_top;
+	NanTreeNodeId * nstack;
+	size_t          nstack_top;
 	
 	/* Set by nlex_tokrec_init() and modified during runtime */
 	char * tokbuf;       /* Not cyclic */
@@ -180,6 +184,36 @@ static inline _Bool nlex_nstack_is_empty(NlexHandle * nh)
 	return (nh->nstack_top == -1);
 }
 
+static inline void nlex_nstack_dump(NlexHandle * nh)
+{
+	int i;
+
+	fprintf(stderr, "nlex nstack [bottom ");
+
+	for(i = 0; i <= nh->nstack_top; i++)
+		fprintf(stderr, "%d ", nh->nstack[i]);
+
+	fprintf(stderr, " top]\n");
+}
+
+static inline void nlex_nstack_remove_lowprio_actions(NlexHandle * nh)
+{
+	int i;
+	unsigned long lowid = ULONG_MAX;
+
+	/* Find the action node with the lowest id (higher priority) */
+	for(i = 0; i <= nh->nstack_top; i++)
+		if(nh->nstack[i] & 1 && nh->nstack[i] < lowid)
+			lowid = nh->nstack[i];
+
+	/* Mark other action nodes to be avoided */
+	if(lowid != ULONG_MAX) {
+		for(i = 0; i <= nh->nstack_top; i++)
+			if(nh->nstack[i] & 1 && nh->nstack[i] != lowid)
+				nh->nstack[i] = 0;
+	}
+}
+
 static inline void nlex_nstack_push(NlexHandle * nh, size_t id)
 {
 	nh->nstack_top++;
@@ -194,8 +228,8 @@ void nlex_onerror(NlexHandle * nh, int errno);
 
 static inline void nlex_swap_t_n_stacks(NlexHandle * nh)
 {
-	size_t * ptmp;
-	size_t   stmp;
+	NanTreeNodeId * ptmp;
+	size_t          stmp;
 
 	ptmp = nh->tstack;
 	stmp = nh->tstack_top;
