@@ -269,6 +269,17 @@ static inline void nlex_tokrec_finish(NlexHandle * nh)
 	*(nh->tokbufptr) = '\0';
 }
 
+static inline _Bool nlex_tstack_has_non_action_nodes(NlexHandle * nh)
+{
+	int i;
+
+	for(i = 0; i <= nh->tstack_top; i++)
+		if((nh->tstack[i] & 1) == 0)
+			return 1;
+	
+	return 0;
+}
+
 static inline _Bool nlex_tstack_is_empty(NlexHandle * nh)
 {
 	return (nh->tstack_top == -1);

@@ -62,7 +62,7 @@ static inline void
 
 	if(c < 0) {
 		if(-c & NLEX_CASE_ANYCHAR)
-			fprintf(fp, "(%s != 0 && %d != EOF)", id, id);
+			fprintf(fp, "(%s != 0 && %s != EOF)", id, id);
 		else if(-c & NLEX_CASE_DIGIT)
 			fprintf(fp, "isdigit(%s)", id);
 		else if(-c & NLEX_CASE_EOF)

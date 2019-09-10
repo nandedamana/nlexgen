@@ -8,8 +8,13 @@
 #include "tree.h"
 
 NanTreeNodeId id_lastact    = 0;
-NanTreeNodeId id_lastnonact = 0;
+NanTreeNodeId id_lastnonact = 1; /* First one used for the root */
 
+/* XXX The resulting code will go through an extra push/pop to reach
+ * the action node.
+ * This was to make the longest rule preferable (on collision), IIRC.
+ * TODO do more research.
+ */
 void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 {
 	NanTreeNode * tptr;
@@ -80,7 +85,11 @@ int main()
 	troot.first_child = NULL;
 	troot.sibling     = NULL;
 	troot.ch          = NLEX_CASE_ROOT;
-	troot.id          = 1;
+	
+	/* ID has to be even because it is a non-action node;
+	 * 0 cannot be used because it is a marker (do-not-care cases).
+	 */
+	troot.id          = 2;
 
 	nh = nlex_handle_new();
 	if(!nh)
@@ -106,25 +115,17 @@ int main()
 			}
 
 			/* BEGIN Create/attach the action node to the tree */
-			if(tcurnode->ch == NLEX_CASE_ACT) {
-				/* The current node is already an else (explicit #else) */
-				
-				/* Copy the action. */
-				tcurnode->ptr = (void *) nh->tokbuf;
-			}
-			else {
-				NanTreeNode *anode = nlex_malloc(NULL, sizeof(NanTreeNode));
-				anode->id = 0;
-				anode->ch = NLEX_CASE_ACT;
-//				anode->sibling     = NULL; TODO REM if not needed
+			NanTreeNode *anode = nlex_malloc(NULL, sizeof(NanTreeNode));
+			anode->id = 0;
+			anode->ch = NLEX_CASE_ACT;
 
-				/* Copy the action. */
-				anode->ptr = (void *) nh->tokbuf;
-				/* Nobody cares about first_child or sibling of an action node. */
-				
-				/* Now attach */
-				tcurnode->first_child = anode;
-			}
+			/* Copy the action. */
+			anode->ptr = (void *) nh->tokbuf;
+			/* Nobody cares about first_child or sibling of an action node. */
+			
+			/* Now prepend */
+			anode->sibling        = tcurnode->first_child;
+			tcurnode->first_child = anode;
 			/* END Attach the action node to the tree */			
 
 			/* Reset the tree pointer */
@@ -294,7 +295,7 @@ int main()
 			
 			newnode->sibling     = NULL;
 			newnode->first_child = NULL;
-			
+
 			if(tptr_prv == NULL) /* Case: tcurnode has no children yet */
 				tcurnode->first_child = newnode;
 			else
@@ -329,7 +330,9 @@ int main()
 		"nlex_nstack_dump(nh);\n"
 #endif
 		"nlex_swap_t_n_stacks(nh);\n"
-		"ch = nlex_next(nh);\n"
+		// TODO FIXME
+//		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
+		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }\n"
 		"while(!nlex_tstack_is_empty(nh) && "
 		"(nh->curstate = nlex_tstack_pop(nh))) {\n");
 	nan_tree2code(&troot, NULL);
