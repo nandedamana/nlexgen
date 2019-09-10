@@ -31,9 +31,14 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 			fprintf(fpout, ") && (ch == ");
 			nan_c_print_character(tptr->ch, fpout);
 		}
-		else if(-(tptr->ch) & NLEX_CASE_LIST) {
-			fprintf(fpout, ") && (");
-			nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
+		else if(tptr->ch < 0) { /* Special cases */
+			if(-(tptr->ch) & NLEX_CASE_ANYCHAR) {
+				fprintf(fpout, ") && (ch != 0 && ch != EOF");
+			}
+			else if(-(tptr->ch) & NLEX_CASE_LIST) {
+				fprintf(fpout, ") && (");
+				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
+			}
 		}
 
 		if(tptr->ch != NLEX_CASE_ACT) {
@@ -159,6 +164,13 @@ int main()
 				ch      = -NLEX_CASE_LIST;
 				/* Go on; the list will be added to the tree. */
 			}
+			else if(ch == '.') {
+				if(in_list)
+					nlex_die("dot wildcard is not permitted inside lists."); // TODO line and col
+
+				ch      = -NLEX_CASE_ANYCHAR;
+				/* Go on; this will be added to the tree. */
+			}
 			else if(ch == '*') { /* Kleene star */
 				if(tcurnode == &troot)
 					nlex_die("Kleene star without any preceding character."); // TODO line and col
@@ -166,7 +178,9 @@ int main()
 				/* tcurnode points to the last added node */
 
 				if(tcurnode->ch < 0 && !(-(tcurnode->ch) & NLEX_CASE_LIST)) {
-					nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
+					// TODO FIXME
+					fprintf(stderr, "%d\n", tcurnode->ch);
+					//nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
 				}
 
 				/* Check if curnode has children. If no, 'a' was not used before 'a*';
@@ -308,8 +322,11 @@ int main()
 		nlex_die("List opened but not closed."); // TODO line and col
 
 	/* BEGIN Code Generation */
-
-	// TODO goto label for the root
+	
+	/* // TODO only for debugging
+	nan_tree_dump(&troot, 0);
+	fprintf(stderr, "tree dump complete.\n");
+	*/
 
 	fprintf(fpout, "nlex_nstack_push(nh, %p);\n", &troot);	
 	fprintf(fpout,

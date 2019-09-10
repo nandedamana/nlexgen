@@ -4,17 +4,18 @@
 
 #include "error.h"
 
-#define NLEX_CASE_NONE -1
-#define NLEX_CASE_ROOT -2
-#define NLEX_CASE_ACT  -4
+#define NLEX_CASE_NONE    -1
+#define NLEX_CASE_ROOT    -2
+#define NLEX_CASE_ACT     -4
 
 /* Will be negated. */
-#define NLEX_CASE_LIST  8
+#define NLEX_CASE_ANYCHAR  8
+#define NLEX_CASE_LIST    16
 
 /* Will be ORed with NanTreeNode.ch for lists.
  * Single character nodes will be converted to lists to enable Kleene.
  */
-#define NLEX_CASE_KLEENE 16
+#define NLEX_CASE_KLEENE  32
 
 #define NAN_CHARACTER_LIST(x) ((NanCharacterList *) (x))
 
@@ -120,9 +121,11 @@ static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
 	if(node->ch >= 0) { /* Single char */
 		/* Convert to list */
 		node->ptr = nan_character_list_new_from_character(node->ch);
+
+		node->ch = -NLEX_CASE_LIST;
 	}
 
-	node->ch = -(NLEX_CASE_LIST | NLEX_CASE_KLEENE);
+	node->ch = -(-(node->ch) | NLEX_CASE_KLEENE);
 }
 
 /* TODO FIXME This comparison is order-sensitive for lists. */
