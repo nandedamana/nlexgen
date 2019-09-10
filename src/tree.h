@@ -60,17 +60,17 @@ static inline void
 {
 	NlexCharacter escin;
 
-	switch(c) {
-	case NLEX_CASE_DIGIT:
-		fprintf(fp, "isdigit(%s)", id);
-		break;
-	case NLEX_CASE_EOF:
-		fprintf(fp, "%s == EOF", id);
-		break;
-	case NLEX_CASE_WORDCHAR:
-		fprintf(fp, "isalpha(%s) || isdigit(%s) || %s == '_'", id, id, id);
-		break;
-	default:
+	if(c < 0) {
+		if(-c & NLEX_CASE_ANYCHAR)
+			fprintf(fp, "(%s != 0 && %d != EOF)", id, id);
+		else if(-c & NLEX_CASE_DIGIT)
+			fprintf(fp, "isdigit(%s)", id);
+		else if(-c & NLEX_CASE_EOF)
+			fprintf(fp, "%s == EOF", id);
+		else if(-c & NLEX_CASE_WORDCHAR)
+			fprintf(fp, "isalpha(%s) || isdigit(%s) || %s == '_'", id, id, id);
+	}
+	else {
 		escin = nlex_get_counterpart(c, escout_c, escin_c);
 
 		if(escin == NAN_NOMATCH)
@@ -83,20 +83,15 @@ static inline void
 static inline void
 	nan_character_list_append(NanCharacterList * ncl, NlexCharacter c)
 {
-	// TODO use nlex_realloc()?
-	ncl->list = realloc(ncl->list, sizeof(NlexCharacter) * (ncl->count + 1));
-	if(!ncl->list)
-		nlex_die("realloc() error.");
+	ncl->list =
+		nlex_realloc(NULL, ncl->list, sizeof(NlexCharacter) * (ncl->count + 1));
 
 	ncl->list[ncl->count++] = c;
 }
 
 static inline NanCharacterList * nan_character_list_new()
 {
-	// TODO use nlex_malloc()?
-	NanCharacterList * ncl = malloc(sizeof(NanCharacterList));
-	if(!ncl)
-		nlex_die("malloc() error.");
+	NanCharacterList * ncl = nlex_malloc(NULL, sizeof(NanCharacterList));
 	
 	ncl->count = 0;
 	ncl->list  = NULL;

@@ -32,21 +32,23 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 		if(tptr->ch < 0 && -(tptr->ch) & NLEX_CASE_KLEENE)
 			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(tptr));
 
-		if(tptr->ch >= 0) { /* Regular character; not a special case. */
-			fprintf(fpout, ") && (");
-			nan_character_print_c_comp(tptr->ch, "ch", fpout);
-		}
-		else if(tptr->ch < 0) { /* Special cases */
-			if(-(tptr->ch) & NLEX_CASE_ANYCHAR) {
-				fprintf(fpout, ") && (ch != 0 && ch != EOF");
-			}
-			else if(-(tptr->ch) & NLEX_CASE_LIST) {
+		_Bool printed = 0;
+
+		if(tptr->ch < 0) { /* Special cases */
+			if(-(tptr->ch) & NLEX_CASE_LIST) {
 				fprintf(fpout, ") && (");
 				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), "ch", fpout);
+				printed = 1;
 			}
-			else if(-(tptr->ch) & NLEX_CASE_ACT) {
+			else if(tptr->ch == NLEX_CASE_ACT) {
 				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
+				printed = 1;
 			}
+		}
+
+		if(!printed) {
+			fprintf(fpout, ") && (");
+			nan_character_print_c_comp(tptr->ch, "ch", fpout);
 		}
 
 		fprintf(fpout, ")) {\n");
@@ -322,8 +324,8 @@ int main()
 		"while(!nlex_nstack_is_empty(nh)) {\n"
 		"nlex_nstack_fix_actions(nh);\n"
 #ifdef DEBUG
-		"fprintf(stderr,"
-		"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+		"fprintf(stderr, "
+		"\"stack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
 		"nlex_nstack_dump(nh);\n"
 #endif
 		"nlex_swap_t_n_stacks(nh);\n"
