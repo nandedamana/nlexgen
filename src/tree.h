@@ -131,7 +131,7 @@ static inline void
 		nan_character_print_c_comp(ncl->list[0], id, fp);
 	
 		for(i = 1; i < ncl->count; i++) {
-			fprintf(fp, " || ch == ");
+			fprintf(fp, " || ");
 			nan_character_print_c_comp(ncl->list[i], id, fp);
 		}
 	}
