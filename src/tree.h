@@ -9,13 +9,16 @@
 #define NLEX_CASE_ACT     -4
 
 /* Will be negated. */
-#define NLEX_CASE_ANYCHAR  8
-#define NLEX_CASE_LIST    16
+#define NLEX_CASE_ANYCHAR    8
+#define NLEX_CASE_DIGIT     16
+#define NLEX_CASE_EOF       32
+#define NLEX_CASE_WORDCHAR  64
+#define NLEX_CASE_LIST     128
 
 /* Will be ORed with NanTreeNode.ch for lists.
  * Single character nodes will be converted to lists to enable Kleene.
  */
-#define NLEX_CASE_KLEENE  32
+#define NLEX_CASE_KLEENE   256
 
 #define NAN_CHARACTER_LIST(x) ((NanCharacterList *) (x))
 
@@ -52,18 +55,28 @@ extern NanTreeNodeId id_lastact;
 extern NanTreeNodeId id_lastnonact;
 
 /* Print a character to the C source code output with escaping if needed */
-static inline void nan_c_print_character(NlexCharacter c, FILE * fp)
+static inline void
+	nan_character_print_c_comp(NlexCharacter c, const char * id, FILE * fp)
 {
-	if(c == EOF) {
-		fprintf(fp, "EOF");
-	}
-	else {
-		NlexCharacter escin = nlex_get_counterpart(c, escout_c, escin_c);
+	NlexCharacter escin;
+
+	switch(c) {
+	case NLEX_CASE_DIGIT:
+		fprintf(fp, "isdigit(%s)", id);
+		break;
+	case NLEX_CASE_EOF:
+		fprintf(fp, "%s == EOF", id);
+		break;
+	case NLEX_CASE_WORDCHAR:
+		fprintf(fp, "isalpha(%s) || isdigit(%s) || %s == '_'", id, id, id);
+		break;
+	default:
+		escin = nlex_get_counterpart(c, escout_c, escin_c);
 
 		if(escin == NAN_NOMATCH)
-			fprintf(fp, "'%c'", c);
+			fprintf(fp, "%s == '%c'", id, c);
 		else
-			fprintf(fp, "'\\%c'", escin);
+			fprintf(fp, "%s == '\\%c'", id, escin);
 	}
 }
 
@@ -109,17 +122,17 @@ static inline NanCharacterList *
 
 /* Character list to Boolean expression */
 static inline void
-	nan_character_list_to_expr(NanCharacterList * ncl, FILE * fp)
+	nan_character_list_to_expr(
+		NanCharacterList * ncl, const char * id, FILE * fp)
 {
 	int i;
 	
 	if(ncl->count) {
-		fprintf(fp, "ch == ");
-		nan_c_print_character(ncl->list[0], fp);
+		nan_character_print_c_comp(ncl->list[0], id, fp);
 	
 		for(i = 1; i < ncl->count; i++) {
 			fprintf(fp, " || ch == ");
-			nan_c_print_character(ncl->list[i], fp);
+			nan_character_print_c_comp(ncl->list[i], id, fp);
 		}
 	}
 }

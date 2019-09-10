@@ -4,14 +4,15 @@
  */
 
 #include "read.h"
+#include "tree.h"
 
 /* NLEX_ITSELF can be set using the gcc option -D */
 #ifdef NLEX_ITSELF
 FILE * fpout;
 
 /* Includes the escaping of special chars used by the lexgen */
-const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '[', ']', '*', 'Z',  NAN_NOMATCH};
-const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '[', ']', '*', EOF, NAN_NOMATCH};
+const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '[', ']', '*', 'd', 'w', 'Z',  NAN_NOMATCH};
+const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '[', ']', '*', NLEX_CASE_DIGIT, NLEX_CASE_WORDCHAR, NLEX_CASE_EOF, NAN_NOMATCH};
 #endif
 
 /* For C output */

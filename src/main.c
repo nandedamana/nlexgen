@@ -33,8 +33,8 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(tptr));
 
 		if(tptr->ch >= 0) { /* Regular character; not a special case. */
-			fprintf(fpout, ") && (ch == ");
-			nan_c_print_character(tptr->ch, fpout);
+			fprintf(fpout, ") && (");
+			nan_character_print_c_comp(tptr->ch, "ch", fpout);
 		}
 		else if(tptr->ch < 0) { /* Special cases */
 			if(-(tptr->ch) & NLEX_CASE_ANYCHAR) {
@@ -42,7 +42,10 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 			}
 			else if(-(tptr->ch) & NLEX_CASE_LIST) {
 				fprintf(fpout, ") && (");
-				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), fpout);
+				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), "ch", fpout);
+			}
+			else if(-(tptr->ch) & NLEX_CASE_ACT) {
+				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
 			}
 		}
 
@@ -290,27 +293,10 @@ int main()
 			newnode->sibling     = NULL;
 			newnode->first_child = NULL;
 			
-			/* Possible cases:
-			 * 1) The current node has no children
-			 * 2) The current node has children
-			 * 2.1) The last child is an else node
-			 * 2.2) The last child is a non-else node
-			 */
-	
-			if(tptr_prv == NULL) {
-				/* Case: tcurnode has no children yet */
+			if(tptr_prv == NULL) /* Case: tcurnode has no children yet */
 				tcurnode->first_child = newnode;
-			}
-			else {
-				if(newnode->ch != NLEX_CASE_ACT) {
-					/* Prepend */
-					newnode->sibling      = tcurnode->first_child;
-					tcurnode->first_child = newnode;
-				}
-				else {
-					tptr_prv->sibling = newnode;
-				}
-			}
+			else
+				tptr_prv->sibling = newnode;
 			
 			/* For the next character, this node will be the parent */
 			tcurnode = newnode;
@@ -324,7 +310,9 @@ int main()
 	/* BEGIN Code Generation */
 	
 	// TODO FIXME
-	if(0) {
+	#define DEBUG 1
+	
+	if(DEBUG) {
 		nan_tree_dump(&troot, 0);
 		fprintf(stderr, "tree dump complete.\n");
 	}
@@ -332,7 +320,12 @@ int main()
 	fprintf(fpout, "nlex_nstack_push(nh, %d);\n", troot.id);
 	fprintf(fpout,
 		"while(!nlex_nstack_is_empty(nh)) {\n"
-		"nlex_nstack_remove_lowprio_actions(nh);\n"
+		"nlex_nstack_fix_actions(nh);\n"
+#ifdef DEBUG
+		"fprintf(stderr,"
+		"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+		"nlex_nstack_dump(nh);\n"
+#endif
 		"nlex_swap_t_n_stacks(nh);\n"
 		"ch = nlex_next(nh);\n"
 		"while(!nlex_tstack_is_empty(nh) && "

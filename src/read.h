@@ -193,24 +193,36 @@ static inline void nlex_nstack_dump(NlexHandle * nh)
 	for(i = 0; i <= nh->nstack_top; i++)
 		fprintf(stderr, "%d ", nh->nstack[i]);
 
-	fprintf(stderr, " top]\n");
+	fprintf(stderr, "top]\n");
 }
 
-static inline void nlex_nstack_remove_lowprio_actions(NlexHandle * nh)
+/* Remove low-priority actions and push the remaining one action node to the
+ * stack's bottom so that it'll be considered only after all other
+ * possibilities.
+ */
+static inline void nlex_nstack_fix_actions(NlexHandle * nh)
 {
 	int i;
-	unsigned long lowid = ULONG_MAX;
+	int lowpos = 0;
+	unsigned long lowid;
 
 	/* Find the action node with the lowest id (higher priority) */
 	for(i = 0; i <= nh->nstack_top; i++)
-		if(nh->nstack[i] & 1 && nh->nstack[i] < lowid)
-			lowid = nh->nstack[i];
+		if(nh->nstack[i] & 1 && nh->nstack[i] < nh->nstack[lowpos])
+			lowpos = i;
 
 	/* Mark other action nodes to be avoided */
-	if(lowid != ULONG_MAX) {
+	if(nh->nstack[lowpos] & 1) { /* This means at least one action was found. */
 		for(i = 0; i <= nh->nstack_top; i++)
-			if(nh->nstack[i] & 1 && nh->nstack[i] != lowid)
+			if(nh->nstack[i] & 1 && i != lowpos)
 				nh->nstack[i] = 0;
+
+		/* Swap the low-prio action with the stack bottom */
+		if(lowpos != 0) {
+			lowid              = nh->nstack[lowpos];
+			nh->nstack[lowpos] = nh->nstack[0];
+			nh->nstack[0]      = lowid;
+		}
 	}
 }
 
