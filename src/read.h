@@ -263,6 +263,19 @@ static inline void nlex_tokrec(NlexHandle * nh)
 /* Initialize the token buffer */
 void nlex_tokrec_init(NlexHandle * nh);
 
+static inline void nlex_tokrec_back(NlexHandle * nh)
+{
+	if(nh->tokbufptr > nh->tokbuf) {
+		size_t pos = (nh->tokbufptr - nh->tokbuf);
+
+		nh->tokbuf       = nlex_realloc(nh, nh->tokbuf, pos);
+		nh->tokbufptr    = nh->tokbuf + pos;
+		nh->tokbufendptr = nh->tokbuf + nh->tokbuflen;
+
+		*(nh->tokbufptr) = '\0';
+	}
+}
+
 /* Just null-termination; no memory cleanup. */
 static inline void nlex_tokrec_finish(NlexHandle * nh)
 {

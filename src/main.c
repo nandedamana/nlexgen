@@ -241,6 +241,31 @@ int main()
 				/* Skipping the rest because no new node is to be added */
 				continue;
 			}
+			else if(ch == '+') { /* Kleene plus */
+				if(tcurnode == &troot)
+					nlex_die("Kleene plus without any preceding character."); // TODO line and col
+				
+				/* TODO warning on other forbidden cases */
+				
+				/* Simply clone curnode, make it a Kleene star, and then
+				 * add it as the child of curnode.
+				 */
+				
+				NanTreeNode * newnode = nlex_malloc(nh, sizeof(NanTreeNode));
+				memcpy(newnode, tcurnode, sizeof(NanTreeNode));
+				newnode->first_child  = NULL;
+
+				nan_tree_node_convert_to_kleene(newnode);
+				
+				/* Prepend */
+				newnode->sibling      = tcurnode->first_child;
+				tcurnode->first_child = newnode;
+				
+				tcurnode = newnode;
+				
+				/* Skip the rest since no new node is to be added. */
+				continue;
+			}
 		}
 
 		if(in_list) {
