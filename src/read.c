@@ -11,8 +11,8 @@
 FILE * fpout;
 
 /* Includes the escaping of special chars used by the lexgen */
-const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '[', ']', '*', '+', 'd', 'w', 'Z',  NAN_NOMATCH};
-const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '[', ']', '*', '+', -NLEX_CASE_DIGIT, -NLEX_CASE_WORDCHAR, -NLEX_CASE_EOF, NAN_NOMATCH};
+const NlexCharacter escin [] = {'a',  'b',  'f',  'n',  'r',  't',  'v',  '\\', '\'', '"', '\?', '0',  '[', ']', '^', '*', '+', 'd', 'w', 'Z',  NAN_NOMATCH};
+const NlexCharacter escout[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\', '\'', '"', '\?', '\0', '[', ']', '^', '*', '+', -NLEX_CASE_DIGIT, -NLEX_CASE_WORDCHAR, -NLEX_CASE_EOF, NAN_NOMATCH};
 #endif
 
 /* For C output */
@@ -27,76 +27,68 @@ NlexHandle * nlex_handle_new()
 	if(!nh)
 		return NULL;
 	
-	nh->buflen      = NLEX_DEFT_BUFSIZE;
-	nh->tokbuf_unit = NLEX_DEFT_TBUF_UNIT;
+	nh->buf_alloc_unit = NLEX_DEFT_BUF_ALLOC_UNIT;
 	
-	nh->tokbuf      = NULL;
-	
-	nh->on_error    = nlex_onerror;
-	nh->on_next     = NULL;
+	nh->on_error       = nlex_onerror;
+	nh->on_next        = NULL;
 	
 	return nh;
 }
 
 void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 {
+	/* These two assignments not put inside some branching because
+	 * the one that is not chosen has to be initialized to NULL
+	 * and these two will do that automatically.
+	 */
 	nh->fp          = fpi;
-
 	/* Casting is safe because I know I don't misuse it. */
 	nh->buf         = (char *) buf;
 
-	if(fpi) {
-		nh->buf       = nlex_malloc(nh, nh->buflen);
+	nh->bufptr      = nh->buf - 1;
+	
+	nh->auxbuf      = NULL;
 
-		/* Precalculate for efficient later comparisons.
-		 * (buf + BUFLEN) actually points to the first byte next to the end of the buffer.
-		*/
-		nh->bufendptr = nh->buf + nh->buflen;	
-	}
-
-	nh->bufptr      = nh->buf;
-
-	nh->tstack     = NULL;
-	nh->nstack_top = -1;
-	nh->nstack     = NULL;
-	nh->tstack_top = -1;
+	nh->tstack      = NULL;
+	nh->nstack      = NULL;
 }
 
 int nlex_next(NlexHandle * nh)
 {
+	nh->bufptr++;
+
 	/* If fp is NULL, bufptr is assumed to be pointed to a pre-filled buffer.
 	 * This helps tokenize strings directly.
 	 */
-	if(nh->fp) {
-		/* Cyclic buffer
-		 * (bufendptr is out of bound, so no memory wastage due to the following 
-		 * comparison)
-		 */
-		if(nh->bufptr == nh->bufendptr) {
-			/* This is the best place to check */
-			if(feof(nh->fp))
-				return EOF;
+	if(nh->fp && (nh->bufptr == nh->bufendptr)) {
+		/* This is the best place to check */
+		if(feof(nh->fp))
+			return EOF;
 
-			nh->bufptr = nh->buf;
-		}
+		/* We have to read more */
 
-		/* Pointer at the beginning of the buffer means we have to read */
-		if(nh->bufptr == nh->buf) {
-			size_t bytes_read = fread(nh->buf, 1, nh->buflen, nh->fp);
-			if(ferror(nh->fp))
-				nh->on_error(nh, NLEX_ERR_READING);
-			
-			/* Again, points to the memory location next to the last character. */
-			nh->bufendptr = nh->buf + bytes_read;
-		}
+		size_t curlen = nh->bufendptr - nh->buf;
+		nh->buf       = nlex_realloc(nh, nh->buf, curlen + nh->buf_alloc_unit);
+
+		/* Because realloc() might have relocated the buffer */
+		nh->bufptr    = nh->buf + curlen;
+	
+		nh->bufendptr = nh->bufptr + nh->buf_alloc_unit;
+fprintf(stderr, "nlex_next() reading again\n");
+		fread(nh->bufptr, nh->buf_alloc_unit, 1, nh->fp);
+		if(ferror(nh->fp))
+			nh->on_error(nh, NLEX_ERR_READING);
+		
+		/* Points to the memory location next to the last character. */
+		nh->bufendptr = nh->bufptr + nh->buf_alloc_unit;
 	}
 
 	/* Useful for line counting, col counting, etc. */
 	if(nh->on_next)
 		nh->on_next(nh);
-
+fprintf(stderr, "nlex_next() returning %d (%c)\n", *(nh->bufptr), *(nh->bufptr));
 	/* Now return the character */
-	return *(nh->bufptr++);
+	return *(nh->bufptr);
 }
 
 void nlex_onerror(NlexHandle * nh, int errno)
@@ -115,35 +107,4 @@ void nlex_onerror(NlexHandle * nh, int errno)
 	}
 	
 	exit(1);
-}
-
-void nlex_tokbuf_append(NlexHandle * nh, const char c) {
-	/* bufendptr is out of bound, so no memory wastage */
-	if(nh->tokbufptr == nh->tokbufendptr) {
-		nh->tokbuflen += nh->tokbuf_unit;
-		nh->tokbuf     = nlex_realloc(nh, nh->tokbuf, nh->tokbuflen);
-		
-		nh->tokbufendptr = nh->tokbuf + nh->tokbuflen;
-		
-		/* Resetting nh->tokbufptr is a must after realloc() since the buffer might
-		 * have been relocated.
-		 */
-		nh->tokbufptr  = nh->tokbufendptr - nh->tokbuf_unit;
-	}
-
-	*(nh->tokbufptr++) = c;
-}
-
-void nlex_tokrec_init(NlexHandle * nh)
-{
-	/* calloc() may ensure automatic null-termination,
-	 * but later realloc() won't. Hence malloc().
-	 */
-	nh->tokbuf = nlex_malloc(nh, nh->tokbuf_unit);
-
-	nh->tokbufptr = nh->tokbuf;
-	nh->tokbuflen = nh->tokbuf_unit;
-
-	/* Precalculate for efficient comparison */
-	nh->tokbufendptr = nh->tokbuf + nh->tokbuf_unit;
 }

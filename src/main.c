@@ -10,21 +10,41 @@
 NanTreeNodeId id_lastact    = 0;
 NanTreeNodeId id_lastnonact = 1; /* First one used for the root */
 
-/* XXX The resulting code will go through an extra push/pop to reach
- * the action node.
- * This was to make the longest rule preferable (on collision), IIRC.
- * TODO do more research.
- */
-void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
+/* Conversion of action nodes */
+void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
 
 	if(root->ch == NLEX_CASE_ACT) {
-		fprintf(fpout, "if(nh->curstate == %d) {\n%s\n}\n",
+		if(if_printed)
+			fprintf(fpout, "else ");
+		else
+			if_printed = 1;
+
+		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
+			"nh->bufptr = nh->lastmatchptr;\n%s\n}\n",
 			nan_tree_node_id(root),
 			(char *) root->ptr);
+
 		return;
 	}
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		nan_tree_astates_to_code(tptr, if_printed);
+	}
+	
+	return;
+}
+
+/* Conversion of intermediate nodes */
+/* XXX The resulting code will go through an extra step to reach
+ * the action node.
+ * This was to make the longest rule preferable (on collision), IIRC.
+ * TODO do more research.
+ */
+void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
+{
+	NanTreeNode * tptr;
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));
@@ -39,14 +59,26 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 
 		_Bool printed = 0;
 
+// TODO make the branching better
+
 		if(tptr->ch < 0) { /* Special cases */
 			if(-(tptr->ch) & NLEX_CASE_LIST) {
-				fprintf(fpout, ") && (");
+				fprintf(fpout, ") && ");
+
+				if(-(tptr->ch) & NLEX_CASE_INVERT)
+					fprintf(fpout, "!(");
+				else
+					fprintf(fpout, "(");
+				
 				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), "ch", fpout);
 				printed = 1;
 			}
 			else if(tptr->ch == NLEX_CASE_ACT) {
-				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
+// TODO FIXME
+//				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
+
+// TODO FIXME enabling again for semicolon in nguigen
+				fprintf(fpout, ") && (1");
 				printed = 1;
 			}
 		}
@@ -58,10 +90,35 @@ void nan_tree2code(NanTreeNode * root, NanTreeNode * grandparent)
 
 		fprintf(fpout, ")) {\n");
 
-		/* Push itself onto the next-stack */
-		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		if(tptr->ch == NLEX_CASE_ACT) {
+			fprintf(fpout,
+				"\tif(%d < hiprio_act_this_iter)\n"
+				"\t\thiprio_act_this_iter = %d;\n",
+				nan_tree_node_id(tptr),
+				nan_tree_node_id(tptr));
+		}
+		else { /* Non-action node */
+			/* Usually Kleene star nodes push themselves into the next-stack.
+			 * But upon reaching a next-to-wildcard match, I've to remove the
+			 * Kleene state from the stack. This is to prevent 'cde' from
+			 * being consumed in 'axyzbcde' against the regex 'a*bcde'
+			 */
+			if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE) {
+				fprintf(fpout,
+					/* checking again to skip grandparents */
+					"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
+					nan_tree_node_id(root),
+					nan_tree_node_id(root));
+			}
+			
+			fprintf(fpout, "\tnh->lastmatchptr = nh->bufptr;\n");
+
+			/* Push itself onto the next-stack */
+			fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		}
+
 		fprintf(fpout, "}\n");
-		nan_tree2code(tptr, root);
+		nan_tree_istates_to_code(tptr, root);
 	}
 	
 	return;
@@ -77,6 +134,7 @@ int main()
 	NlexCharacter ch;
 	_Bool         escaped = 0;
 	_Bool         in_list = 0; /* [] */
+	_Bool         list_inverted;
 
 	NanCharacterList * chlist;
 
@@ -102,26 +160,19 @@ int main()
 		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
 			
-			nlex_tokrec_init(nh); // TODO err
-			while(1) {
-				ch = nlex_next(nh);
-				
-				if(ch == '\n' || ch == EOF) {
-					nlex_tokrec_finish(nh);
-					break;
-				}
-				
-				nlex_tokbuf_append(nh, ch);
-			}
-
+			nlex_shift(nh);
+			while((ch = nlex_next(nh)) && (ch != '\n' && ch != EOF));
+			
 			/* BEGIN Create/attach the action node to the tree */
-			NanTreeNode *anode = nlex_malloc(NULL, sizeof(NanTreeNode));
+			NanTreeNode * anode = nlex_malloc(NULL, sizeof(NanTreeNode));
 			anode->id = 0;
 			anode->ch = NLEX_CASE_ACT;
 
 			/* Copy the action. */
-			anode->ptr = (void *) nh->tokbuf;
+			anode->ptr = (void *) nlex_bufdup(nh, 1);
 			/* Nobody cares about first_child or sibling of an action node. */
+			
+			anode->first_child = NULL;
 			
 			/* Now prepend */
 			anode->sibling        = tcurnode->first_child;
@@ -156,8 +207,10 @@ int main()
 				if(in_list)
 					nlex_die("List inside list."); // TODO line and col
 
-				chlist  = nan_character_list_new();
-				in_list = 1;
+				chlist        = nan_character_list_new();
+				list_inverted = 0;
+				in_list       = 1;
+
 				continue;
 			}
 			else if(ch == ']') {
@@ -165,8 +218,21 @@ int main()
 					nlex_die("Closing a list that was never open."); // TODO line and col
 
 				in_list = 0;
-				ch      = -NLEX_CASE_LIST;
+				
+				if(list_inverted)
+					ch = -(NLEX_CASE_LIST | NLEX_CASE_INVERT);
+				else
+					ch = -NLEX_CASE_LIST;				
+
 				/* Go on; the list will be added to the tree. */
+			}
+			else if(ch == '^') {
+				if(!in_list)
+					nlex_die("Inverting a list that was never open."); // TODO line and col
+				
+				list_inverted = 1;
+				
+				continue;
 			}
 			else if(ch == '.') {
 				if(in_list)
@@ -231,7 +297,7 @@ int main()
 						
 						tptr->id          = 0;
 						tptr->first_child = NULL;
-						tptr->sibling = tcurnode->sibling;
+						tptr->sibling     = tcurnode->sibling;
 						tcurnode->sibling = tptr;
 						
 						tcurnode = tptr;
@@ -345,23 +411,53 @@ int main()
 		fprintf(stderr, "tree dump complete.\n");
 	}
 
-	fprintf(fpout, "nlex_nstack_push(nh, %d);\n", troot.id);
+// TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
+
 	fprintf(fpout,
+		"nlex_reset_states(nh);\n"
+		"nlex_nstack_push(nh, %d);\n",
+		troot.id);
+	fprintf(fpout,
+// TODO rem
+//		"while(!(nh->done) && !nlex_nstack_is_empty(nh)) {\n"
 		"while(!nlex_nstack_is_empty(nh)) {\n"
-		"nlex_nstack_fix_actions(nh);\n"
+		"nlex_nstack_fix_actions(nh);\n" // TODO FIXME update since I've moved the action nodes out of the stack
+		"if(nh->buf && (nlex_last(nh) == 0 || nlex_last(nh) == EOF)) break;"
 #ifdef DEBUG
-		"fprintf(stderr, "
-		"\"stack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+		"if(nh->buf)"
+		"\tfprintf(stderr, "
+		"\t\t\"bufptr:\\n%%s\\n\", nh->bufptr);\n"
+
+		"if(nh->buf)"		
+		"\tfprintf(stderr, "
+		"\t\t\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+		"else"
+		"\tfprintf(stderr, "
+		"\t\t\"nstack:\\n\");\n"
 		"nlex_nstack_dump(nh);\n"
 #endif
 		"nlex_swap_t_n_stacks(nh);\n"
 		// TODO FIXME
 //		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
 		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }\n"
-		"while(!nlex_tstack_is_empty(nh) && "
-		"(nh->curstate = nlex_tstack_pop(nh))) {\n");
-	nan_tree2code(&troot, NULL);
-	fprintf(fpout, "\n}\n}\n");
+		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
+		"while(!nlex_tstack_is_empty(nh)) {\n"
+		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
+#ifdef DEBUG
+		fprintf(fpout,
+		"\tfprintf(stderr, "
+		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
+#endif
+	nan_tree_istates_to_code(&troot, NULL);
+	fprintf(fpout, "\n}\n"
+		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
+		"}\n");
+#ifdef DEBUG
+	fprintf(fpout,
+		"\tfprintf(stderr, "
+		"\t\t\"enterng anode comparison with nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
+#endif
+	nan_tree_astates_to_code(&troot, 0);
 
 	/* END Code Generation */
 

@@ -14,6 +14,7 @@
 #define NLEX_CASE_EOF       32
 #define NLEX_CASE_WORDCHAR  64
 #define NLEX_CASE_LIST     128
+#define NLEX_CASE_INVERT   512
 
 /* Will be ORed with NanTreeNode.ch for lists.
  * Single character nodes will be converted to lists to enable Kleene.
@@ -250,7 +251,11 @@ static inline void nan_tree_dump(NanTreeNode * root, signed int level)
 	for(i = 0; i < level; i++)
 		fprintf(stderr, "-");
 
-	fprintf(stderr, " ch=%d (%p; id = %d)\n", root->ch, root, nan_tree_node_id(root));
+	/* Printing root separately can be helpful if root is an inavlid address.
+	 * Otherwise segfault will hide the information.
+	 */
+	fprintf(stderr, "%p ", root);
+	fprintf(stderr, "ch=%d (id = %d)\n", root->ch, nan_tree_node_id(root));
 
 	level++;
 
