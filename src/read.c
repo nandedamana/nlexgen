@@ -46,6 +46,7 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	nh->buf         = (char *) buf;
 
 	nh->bufptr      = nh->buf - 1;
+	nh->bufendptr   = nh->buf; /* Makes nlex_next() read if fp != NULL */
 	
 	nh->auxbuf      = NULL;
 
