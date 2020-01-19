@@ -13,7 +13,9 @@
 
 #include "error.h"
 
-#define NLEX_DEFT_BUF_ALLOC_UNIT 4096
+// TODO FIXME
+//#define NLEX_DEFT_BUF_ALLOC_UNIT 4096
+#define NLEX_DEFT_BUF_ALLOC_UNIT 64
 
 /* Because EOF can be any value and writing down a constant here can
  * cause confusion with EOF.
@@ -55,7 +57,7 @@ typedef struct _NlexHandle {
 	
 	char * bufptr;    /* Points to the character in consideration */
 	char * bufendptr; /* Where the next block of the input can be appended */
-	char * lastmatchptr;
+	size_t lastmatchat; /* I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr. */
 	
 	/* Auxilliary buffer, user-defined purpose TODO needed actually? */
 	char * auxbuf;
@@ -295,13 +297,16 @@ static inline void nlex_reset_states(NlexHandle * nh)
  */
 static inline void nlex_shift(NlexHandle * nh)
 {
-	size_t chars_remaining = nh->bufendptr - nh->bufptr;
+	size_t chars_remaining    = nh->bufendptr - nh->bufptr;
+	size_t flushed_char_count = nh->bufptr - nh->buf;
 	
 	memmove(nh->buf, nh->bufptr, chars_remaining);
-	nlex_realloc(nh, nh->buf, chars_remaining);
+	nh->buf = nlex_realloc(nh, nh->buf, chars_remaining);
 	
-	nh->bufptr    = nh->buf; /* Because might have relocated. */
-	nh->bufendptr = nh->buf + chars_remaining;
+	nh->bufptr    = nh->buf;
+	nh->bufendptr = nh->buf + chars_remaining; /* Yes, just out of bound. */
+
+	nh->lastmatchat -= flushed_char_count;
 }
 
 static inline void nlex_swap_t_n_stacks(NlexHandle * nh)
@@ -362,4 +367,11 @@ static inline size_t nlex_tstack_pop(NlexHandle * nh)
 
 	return id;
 }
+
+static inline nlex_debug_print_bufptr(NlexHandle * nh, FILE * stream)
+{
+	for(char *ptr = nh->bufptr; ptr < nh->bufendptr && *ptr; ptr++)
+		fputc(*ptr, stream);
+}
+
 #endif

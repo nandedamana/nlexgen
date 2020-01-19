@@ -67,27 +67,34 @@ int nlex_next(NlexHandle * nh)
 			return EOF;
 
 		/* We have to read more */
-
 		size_t curlen = nh->bufendptr - nh->buf;
 		nh->buf       = nlex_realloc(nh, nh->buf, curlen + nh->buf_alloc_unit);
 
 		/* Because realloc() might have relocated the buffer */
 		nh->bufptr    = nh->buf + curlen;
 	
-		nh->bufendptr = nh->bufptr + nh->buf_alloc_unit;
-fprintf(stderr, "nlex_next() reading again\n");
-		fread(nh->bufptr, nh->buf_alloc_unit, 1, nh->fp);
+		size_t bytes_read = fread(nh->bufptr, 1, nh->buf_alloc_unit, nh->fp);
 		if(ferror(nh->fp))
 			nh->on_error(nh, NLEX_ERR_READING);
+
+		/* Really important */
+		if(bytes_read < nh->buf_alloc_unit) {
+			nh->buf    = nlex_realloc(nh, nh->buf, curlen + bytes_read);
+			nh->bufptr = nh->buf + curlen;
+		}
 		
 		/* Points to the memory location next to the last character. */
-		nh->bufendptr = nh->bufptr + nh->buf_alloc_unit;
+		nh->bufendptr = nh->bufptr + bytes_read;
+
+		/* Really important. The feof() chech at the top fails to detect the end if the file size is a multiple of buf_alloc_unit and the previous read had consumed the last block, leaving nothing for this call to read. */
+		if(bytes_read == 0)
+			return EOF;
 	}
 
 	/* Useful for line counting, col counting, etc. */
 	if(nh->on_next)
 		nh->on_next(nh);
-fprintf(stderr, "nlex_next() returning %d (%c)\n", *(nh->bufptr), *(nh->bufptr));
+
 	/* Now return the character */
 	return *(nh->bufptr);
 }

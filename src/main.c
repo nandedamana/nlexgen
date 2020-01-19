@@ -22,7 +22,7 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 			if_printed = 1;
 
 		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
-			"nh->bufptr = nh->lastmatchptr;\n%s\n}\n",
+			"nh->bufptr = nh->buf + nh->lastmatchat;\n%s\n}\n",
 			nan_tree_node_id(root),
 			(char *) root->ptr);
 
@@ -111,7 +111,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 					nan_tree_node_id(root));
 			}
 			
-			fprintf(fpout, "\tnh->lastmatchptr = nh->bufptr;\n");
+			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 
 			/* Push itself onto the next-stack */
 			fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
@@ -124,7 +124,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 	return;
 }
 
-int main()
+int main(int argc, char * argv[])
 {
 	NanTreeNode   troot;
 	NanTreeNode * tcurnode = &troot;
@@ -153,8 +153,19 @@ int main()
 	if(!nh)
 		nlex_die("nlex_handle_new() returned NULL.");
 	
-	nlex_init(nh, stdin, NULL); // TODO FIXME not always stdin
+	FILE *fpin;
 
+	if(argc == 2) {
+		fpin = fopen(argv[1], "r");
+		if(!fpin)
+			nlex_die("Error opening the input file.");
+	}
+	else {
+		fpin = stdin;
+	}
+
+	nlex_init(nh, fpin, NULL); // TODO FIXME not always stdin
+	
 	/* BEGIN Tree Construction */
 	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
 		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
@@ -431,7 +442,7 @@ int main()
 #ifdef DEBUG
 		"if(nh->buf)"
 		"\tfprintf(stderr, "
-		"\t\t\"bufptr:\\n%%s\\n\", nh->bufptr);\n"
+		"\t\t\"bufptr:\\n\"); nlex_debug_print_bufptr(nh, stderr); puts(\"\");\n"
 
 		"if(nh->buf)"		
 		"\tfprintf(stderr, "
