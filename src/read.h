@@ -13,9 +13,7 @@
 
 #include "error.h"
 
-// TODO FIXME
-//#define NLEX_DEFT_BUF_ALLOC_UNIT 4096
-#define NLEX_DEFT_BUF_ALLOC_UNIT 64
+#define NLEX_DEFT_BUF_ALLOC_UNIT 4096
 
 /* Because EOF can be any value and writing down a constant here can
  * cause confusion with EOF.
@@ -368,7 +366,7 @@ static inline size_t nlex_tstack_pop(NlexHandle * nh)
 	return id;
 }
 
-static inline nlex_debug_print_bufptr(NlexHandle * nh, FILE * stream)
+static inline void nlex_debug_print_bufptr(NlexHandle * nh, FILE * stream)
 {
 	for(char *ptr = nh->bufptr; ptr < nh->bufendptr && *ptr; ptr++)
 		fputc(*ptr, stream);
