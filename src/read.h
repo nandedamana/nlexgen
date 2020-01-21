@@ -56,6 +56,8 @@ typedef struct _NlexHandle {
 	char * bufptr;    /* Points to the character in consideration */
 	char * bufendptr; /* Where the next block of the input can be appended */
 	size_t lastmatchat; /* I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr. */
+
+	_Bool eof_read; /* Set to true if EOF has reached and the buffer was appended with 0 */
 	
 	/* Auxilliary buffer, user-defined purpose TODO needed actually? */
 	char * auxbuf;
