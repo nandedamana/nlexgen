@@ -434,7 +434,7 @@ int main(int argc, char * argv[])
 		"while(!nlex_nstack_is_empty(nh)) {\n"
 		"nlex_nstack_fix_actions(nh);\n" // TODO FIXME update since I've moved the action nodes out of the stack
 		"if(nh->fp) {\n" /* Reading from file */
-			"\tif(nh->buf && (nlex_last(nh) == 0 || nlex_last(nh) == EOF))\n\t\tbreak;\n"
+			"\tif(nh->buf && (nlex_last(nh) == 0))\n\t\tbreak;\n"
 		"}"
 		"else {\n"        /* Reading from string */
 			"\tif(nh->bufptr >= nh->buf && nlex_last(nh) == 0)\n\t\tbreak;\n"
