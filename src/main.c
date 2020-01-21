@@ -440,9 +440,10 @@ int main(int argc, char * argv[])
 			"\tif(nh->bufptr >= nh->buf && nlex_last(nh) == 0)\n\t\tbreak;\n"
 		"}"
 #ifdef DEBUG
-		"if(nh->buf)"
-		"\tfprintf(stderr, "
-		"\t\t\"bufptr:\\n\"); nlex_debug_print_bufptr(nh, stderr); puts(\"\");\n"
+// TODO rem because slow - or truncate the output (and print a notice about it).
+//		"if(nh->buf)"
+//		"\tfprintf(stderr, "
+//		"\t\t\"bufptr:\\n\"); nlex_debug_print_bufptr(nh, stderr); puts(\"\");\n"
 
 		"if(nh->buf)"		
 		"\tfprintf(stderr, "
