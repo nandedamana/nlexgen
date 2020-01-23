@@ -368,9 +368,11 @@ static inline size_t nlex_tstack_pop(NlexHandle * nh)
 	return id;
 }
 
-static inline void nlex_debug_print_bufptr(NlexHandle * nh, FILE * stream)
+static inline void nlex_debug_print_bufptr(NlexHandle * nh, FILE * stream, size_t maxlen)
 {
-	for(char *ptr = nh->bufptr; ptr < nh->bufendptr && *ptr; ptr++)
+	size_t len = 0;
+
+	for(char *ptr = nh->bufptr; ptr < nh->bufendptr && *ptr && len <= maxlen; ptr++, len++)
 		fputc(*ptr, stream);
 }
 
