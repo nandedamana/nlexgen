@@ -30,7 +30,7 @@ NlexHandle * nlex_handle_new()
 	nh->buf_alloc_unit = NLEX_DEFT_BUF_ALLOC_UNIT;
 	
 	nh->on_error       = nlex_onerror;
-	nh->on_next        = NULL;
+	nh->on_consume     = NULL;
 	
 	return nh;
 }
@@ -116,10 +116,6 @@ int nlex_next(NlexHandle * nh)
 			return EOF;
 		}
 	}
-
-	/* Useful for line counting, col counting, etc. */
-	if(nh->on_next)
-		nh->on_next(nh);
 
 	/* Now return the character */
 	return *(nh->bufptr);

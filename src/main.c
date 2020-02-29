@@ -110,7 +110,9 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 					nan_tree_node_id(root),
 					nan_tree_node_id(root));
 			}
-			
+					
+			fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
+				"	if(nh->on_consume)	nh->on_consume(nh);\n");
 			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 
 			/* Push itself onto the next-stack */
@@ -415,12 +417,12 @@ int main(int argc, char * argv[])
 	/* BEGIN Code Generation */
 	
 	// TODO FIXME
-	#define DEBUG 1
+	//#define DEBUG 1
 	
-	if(DEBUG) {
+	#ifdef DEBUG
 		nan_tree_dump(&troot, 0);
 		fprintf(stderr, "tree dump complete.\n");
-	}
+	#endif
 
 // TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
 

@@ -41,12 +41,7 @@ typedef struct _NlexHandle {
 	
 	/* Parameters that can be set anytime */
 	void (*on_error)(struct _NlexHandle * nh, int errno);
-	void (*on_next) (struct _NlexHandle * nh); /* Called after re-buffering,
-	                                            * before pointer update,
-	                                            * meaning (*bufptr) is the newly
-	                                            * read character.
-	                                            */
-
+	void (*on_consume)(struct _NlexHandle * nh);
 	/* Set by nlex_init() */
 	FILE * fp;
 	char * buf;
