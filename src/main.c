@@ -112,7 +112,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 			}
 					
 			fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
-				"	if(nh->on_consume)	nh->on_consume(nh);\n");
+				"	if(nh->on_consume)	nh->on_consume(nh->callback_userdata);\n");
 			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 
 			/* Push itself onto the next-stack */

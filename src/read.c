@@ -27,10 +27,11 @@ NlexHandle * nlex_handle_new()
 	if(!nh)
 		return NULL;
 	
-	nh->buf_alloc_unit = NLEX_DEFT_BUF_ALLOC_UNIT;
+	nh->buf_alloc_unit    = NLEX_DEFT_BUF_ALLOC_UNIT;
 	
-	nh->on_error       = nlex_onerror;
-	nh->on_consume     = NULL;
+	nh->on_error          = nlex_onerror;
+	nh->on_consume        = NULL;
+	nh->callback_userdata = nh;
 	
 	return nh;
 }
