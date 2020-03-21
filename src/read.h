@@ -40,9 +40,9 @@ typedef struct _NlexHandle {
 	size_t buf_alloc_unit;
 	
 	/* Parameters that can be set anytime */
-	void (*on_error)(void *userdata, int errno);
-	void (*on_consume)(void *userdata);
-	void *callback_userdata;
+	void (*on_error)(struct _NlexHandle * nh, int errno);
+	void (*on_consume)(struct _NlexHandle * nh);
+	void *userdata;
 	
 	/* Set by nlex_init() */
 	FILE * fp;
