@@ -1,5 +1,6 @@
-/* read.c used by lexgen as well as the offsprings
- * Nandakumar Edamana
+/* read.c
+ * This file is part of nlexgen, a lexer generator.
+ * Copyright (C) 2019, 2020 Nandakumar Edamana
  * Started on 2019-07-22
  */
 

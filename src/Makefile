@@ -8,13 +8,13 @@ else
   CFLAGS += -s # strip
 endif
 
-default:lexgen
+default:nlexgen
 
 %.o: %.c *.h
 	cc $(CFLAGS) -c $<
 
-lexgen:main.o read.o
-	cc $(CFLAGS) -o lexgen main.o read.o
+nlexgen:main.o read.o
+	cc $(CFLAGS) -o nlexgen main.o read.o
 
 clean:
-	rm -f *.o lexgen
+	rm -f *.o nlexgen
