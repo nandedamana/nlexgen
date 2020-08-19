@@ -1,0 +1,3 @@
+[hH]i  { token = NAN_TOK_HI; }
+".*"    { token = NAN_TOK_HELLO; }
+[ \t\n]+ { token = NAN_TOK_WS; }
