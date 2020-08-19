@@ -1,0 +1,10 @@
+- Handle duplicate rules (currently no error or warning; possibly memory leak also).
+
+2019-09-11
+----------
+- TODO improve: since I've removed the cyclic buffer today, there needs a feature to flush the buffer or limit the go-back area so that the user can save memroy.
+- TODO improve: echo -e "b* A\nb B"|./lexgen would cause a tree with duplicate nodes.
+
+2019-08-11
+----------
+- Option to use another name instead of 'nh' (NlexHandle instance) and 'ch' (ch is equivalent to nh->last(), but a separate variable may increase performance, I think).
