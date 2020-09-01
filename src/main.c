@@ -114,7 +114,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 			}
 					
 			fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
-				"	if(nh->on_consume)	nh->on_consume(nh);\n");
+				"	if(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
 			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 
 			/* Push itself onto the next-stack */
@@ -461,6 +461,7 @@ int main(int argc, char * argv[])
 		// TODO FIXME
 //		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
 		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }\n"
+		"_Bool on_consume_called = 0; // see ngg bug 20200831000\n"
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
 		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
