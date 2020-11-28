@@ -13,8 +13,8 @@ default:nlexgen
 %.o: %.c *.h
 	cc $(CFLAGS) -c $<
 
-nlexgen:main.o read.o
-	cc $(CFLAGS) -o nlexgen main.o read.o
+nlexgen:main.o read.o tree.o
+	cc $(CFLAGS) -o nlexgen main.o read.o tree.o
 
 clean:
 	rm -f *.o nlexgen

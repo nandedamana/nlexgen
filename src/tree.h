@@ -5,6 +5,8 @@
  */
 
 #include "error.h"
+#include "read.h"
+#include "types.h"
 
 #define NLEX_CASE_NONE    -1
 #define NLEX_CASE_ROOT    -2
@@ -28,10 +30,6 @@
 /* XXX 'Nan' prefix is used to distinguish internal components from
  * the components that can be used by other programs.
  */
-
-// TODO avoid redefinition
-// TODO smaller size
-typedef unsigned int NanTreeNodeId;
 
 typedef struct _NanTreeNode {
 	NanTreeNodeId         id;
