@@ -8,6 +8,7 @@
 #define _N96E_LEX_ERROR_H
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static inline void nlex_die(const char *msg) {
 	fflush(stdout);
