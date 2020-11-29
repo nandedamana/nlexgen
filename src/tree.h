@@ -133,6 +133,8 @@ static inline void
 	}
 }
 
+void nan_tree_build(NanTreeNode * root, NlexHandle * nh);
+
 // TODO make non-inline
 static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
 {
@@ -261,4 +263,16 @@ static inline void nan_tree_dump(NanTreeNode * root, signed int level)
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
 		nan_tree_dump(tptr, level);
+}
+
+static inline void nan_tree_init(NanTreeNode * root)
+{
+	root->first_child = NULL;
+	root->sibling     = NULL;
+	root->ch          = NLEX_CASE_ROOT;
+	
+	/* ID has to be even because it is a non-action node;
+	 * 0 cannot be used because it is a marker (do-not-care cases).
+	 */
+	root->id          = 2;
 }
