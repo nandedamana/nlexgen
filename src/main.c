@@ -9,9 +9,6 @@
 #include "read.h"
 #include "tree.h"
 
-NanTreeNodeId id_lastact    = 0;
-NanTreeNodeId id_lastnonact = 1; /* First one used for the root */
-
 int main(int argc, char * argv[])
 {
 	FILE *fpin;

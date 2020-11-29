@@ -52,8 +52,8 @@ typedef struct _NanCharacterList {
 	size_t          count;
 } NanCharacterList;
 
-extern NanTreeNodeId id_lastact;
-extern NanTreeNodeId id_lastnonact;
+extern NanTreeNodeId treebuild_id_lastact;
+extern NanTreeNodeId treebuild_id_lastnonact;
 
 /* Print a character to the C source code output with escaping if needed */
 static inline void
@@ -162,9 +162,9 @@ static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
 	
 	if(node->id == 0) {
 		if(node->ch == NLEX_CASE_ACT)
-			node->id = ((++id_lastact) * 2) + 1;
+			node->id = ((++treebuild_id_lastact) * 2) + 1;
 		else
-			node->id = ((++id_lastnonact) * 2);
+			node->id = ((++treebuild_id_lastnonact) * 2);
 	}
 
 	return node->id;

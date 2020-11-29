@@ -6,6 +6,9 @@
 
 #include "tree.h"
 
+NanTreeNodeId treebuild_id_lastact    = 0;
+NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
+
 void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
