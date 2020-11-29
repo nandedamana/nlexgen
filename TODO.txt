@@ -1,3 +1,7 @@
+2020-11-29
+----------
+* More separation needed between internal symbols and symbols for applications. Currently the `nan_` prefix means internal only, but they are found in headers intended for applications also.
+
 2020-11-28
 ----------
 * In main.c, I've written "/* Nobody cares about first_child or sibling of an action node. */" and I still set them?
