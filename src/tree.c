@@ -6,6 +6,31 @@
 
 #include "tree.h"
 
+void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
+{
+	NanTreeNode * tptr;
+
+	if(root->ch == NLEX_CASE_ACT) {
+		if(if_printed)
+			fprintf(fpout, "else ");
+		else
+			if_printed = 1;
+
+		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
+			"nh->bufptr = nh->buf + nh->lastmatchat;\n%s\n}\n",
+			nan_tree_node_id(root),
+			(char *) root->ptr);
+
+		return;
+	}
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		nan_tree_astates_to_code(tptr, if_printed);
+	}
+	
+	return;
+}
+
 void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 {
 	NanTreeNode * tcurnode = root;
@@ -263,4 +288,93 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 	if(in_list)
 		nlex_die("List opened but not closed."); // TODO line and col
+}
+
+/* XXX The resulting code will go through an extra step to reach
+ * the action node.
+ * This was to make the longest rule preferable (on collision), IIRC.
+ * TODO do more research.
+ */
+void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
+{
+	NanTreeNode * tptr;
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));
+
+		/* Bypass */
+		if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE)
+			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(grandparent));
+		
+		/* Self loop */
+		if(tptr->ch < 0 && -(tptr->ch) & NLEX_CASE_KLEENE)
+			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(tptr));
+
+		_Bool printed = 0;
+
+// TODO make the branching better
+
+		if(tptr->ch < 0) { /* Special cases */
+			if(-(tptr->ch) & NLEX_CASE_LIST) {
+				fprintf(fpout, ") && ");
+
+				if(-(tptr->ch) & NLEX_CASE_INVERT)
+					fprintf(fpout, "!(");
+				else
+					fprintf(fpout, "(");
+				
+				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), "ch", fpout);
+				printed = 1;
+			}
+			else if(tptr->ch == NLEX_CASE_ACT) {
+// TODO FIXME
+//				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
+
+// TODO FIXME enabling again for semicolon in nguigen
+				fprintf(fpout, ") && (1");
+				printed = 1;
+			}
+		}
+
+		if(!printed) {
+			fprintf(fpout, ") && (");
+			nan_character_print_c_comp(tptr->ch, "ch", fpout);
+		}
+
+		fprintf(fpout, ")) {\n");
+
+		if(tptr->ch == NLEX_CASE_ACT) {
+			fprintf(fpout,
+				"\tif(%d < hiprio_act_this_iter)\n"
+				"\t\thiprio_act_this_iter = %d;\n",
+				nan_tree_node_id(tptr),
+				nan_tree_node_id(tptr));
+		}
+		else { /* Non-action node */
+			/* Usually Kleene star nodes push themselves into the next-stack.
+			 * But upon reaching a next-to-wildcard match, I've to remove the
+			 * Kleene state from the stack. This is to prevent 'cde' from
+			 * being consumed in 'axyzbcde' against the regex 'a*bcde'
+			 */
+			if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE) {
+				fprintf(fpout,
+					/* checking again to skip grandparents */
+					"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
+					nan_tree_node_id(root),
+					nan_tree_node_id(root));
+			}
+					
+			fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
+				"	if(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
+			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
+
+			/* Push itself onto the next-stack */
+			fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		}
+
+		fprintf(fpout, "}\n");
+		nan_tree_istates_to_code(tptr, root);
+	}
+	
+	return;
 }
