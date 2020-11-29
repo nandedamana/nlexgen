@@ -130,7 +130,7 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				if(in_list)
 					nlex_die("dot wildcard is not permitted inside lists."); // TODO line and col
 
-				ch      = -NLEX_CASE_ANYCHAR;
+				ch = -NLEX_CASE_ANYCHAR;
 				/* Go on; this will be added to the tree. */
 			}
 			else if(ch == '*') { /* Kleene star */
