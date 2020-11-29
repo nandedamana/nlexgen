@@ -16,7 +16,6 @@ typedef enum _NlexError {
 	NLEX_ERR_READING
 } NlexError;
 
-// TODO avoid redefinition
 typedef unsigned int NanTreeNodeId;
 
 typedef struct _NlexHandle {
