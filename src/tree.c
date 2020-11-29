@@ -20,7 +20,6 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 	nan_tree_init(root);
 
-	/* BEGIN Tree Construction */
 	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
 		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
 			/* Copy everything until line break or EOF into the action buffer */
@@ -261,7 +260,6 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			tcurnode = newnode;
 		}
 	}
-	/* END Tree Construction */
 
 	if(in_list)
 		nlex_die("List opened but not closed."); // TODO line and col
