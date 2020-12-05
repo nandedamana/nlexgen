@@ -5,6 +5,7 @@
  */
 
 #include "tree.h"
+#include "error.h"
 
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
@@ -34,7 +35,7 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 	return;
 }
 
-void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
+const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 {
 	NanTreeNode * tcurnode = root;
 	NanTreeNode * tcurnode_parent;
@@ -81,14 +82,14 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 		 * But this ensures safety in case I change something.
 		 */
 		else if(ch == '\n' || ch == 0 || ch == EOF)
-			nlex_die("No action given for a token."); // TODO line and col
+			return NLEXERR_NO_ACT_GIVEN;
 
 		if(escaped) {
 			ch = nlex_get_counterpart(ch, escin, escout);
 			if(ch != NAN_NOMATCH)
 				escaped = 0;
 			else
-				nlex_die("Unknown escape sequence."); // TODO line and col
+				return NLEXERR_UNKNOWN_ESCSEQ;
 		}
 		else {
 			if(ch == '\\') {
@@ -97,7 +98,7 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			}
 			else if(ch == '[') {
 				if(in_list)
-					nlex_die("List inside list."); // TODO line and col
+					return NLEXERR_LIST_INSIDE_LIST;
 
 				chlist        = nan_character_list_new();
 				list_inverted = 0;
@@ -107,7 +108,7 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			}
 			else if(ch == ']') {
 				if(!in_list)
-					nlex_die("Closing a list that was never open."); // TODO line and col
+					return NLEXERR_CLOSING_NO_LIST;
 
 				in_list = 0;
 				
@@ -120,7 +121,7 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			}
 			else if(ch == '^') {
 				if(!in_list)
-					nlex_die("Inverting a list that was never open."); // TODO line and col
+					return NLEXERR_INVERTING_NO_LIST;
 				
 				list_inverted = 1;
 				
@@ -128,14 +129,14 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			}
 			else if(ch == '.') {
 				if(in_list)
-					nlex_die("dot wildcard is not permitted inside lists."); // TODO line and col
+					return NLEXERR_DOT_INSIDE_LIST;
 
 				ch = -NLEX_CASE_ANYCHAR;
 				/* Go on; this will be added to the tree. */
 			}
 			else if(ch == '*') { /* Kleene star */
 				if(tcurnode == root)
-					nlex_die("Kleene star without any preceding character."); // TODO line and col
+					return NLEXERR_KLEENE_STAR_NOTHING;
 
 				/* tcurnode points to the last added node */
 
@@ -201,7 +202,7 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			}
 			else if(ch == '+') { /* Kleene plus */
 				if(tcurnode == root)
-					nlex_die("Kleene plus without any preceding character."); // TODO line and col
+					return NLEXERR_KLEENE_PLUS_NOTHING;
 				
 				/* TODO warning on other forbidden cases */
 				
@@ -290,7 +291,9 @@ void nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	}
 
 	if(in_list)
-		nlex_die("List opened but not closed."); // TODO line and col
+		return NLEXERR_LIST_NOT_CLOSED;
+	
+	return NLEXERR_SUCCESS;
 }
 
 /* XXX The resulting code will go through an extra step to reach

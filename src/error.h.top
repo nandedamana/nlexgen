@@ -1,0 +1,22 @@
+/* error.h
+ * This file is part of nlexgen, a lexer generator.
+ * Copyright (C) 2019, 2020 Nandakumar Edamana
+ * File started on 2020-12-05.
+ */
+
+#ifndef _N96E_LEX_ERROR_H
+#define _N96E_LEX_ERROR_H
+
+#include <stdarg.h>
+#include <stdio.h>
+
+static inline void nlex_die(const char * fmt, ...)
+{
+	va_list ap;
+	
+	va_start(ap, fmt);
+	fprintf(stderr, "nlexgen error: ");
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+}
+

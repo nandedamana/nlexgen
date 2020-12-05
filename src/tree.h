@@ -136,7 +136,7 @@ static inline void
 /* Conversion of action nodes */
 void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed);
 
-void nan_tree_build(NanTreeNode * root, NlexHandle * nh);
+const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
 
 // TODO make non-inline
 static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
