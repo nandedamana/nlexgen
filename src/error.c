@@ -4,7 +4,6 @@
  * File started on 2020-12-05.
  */
 
-
 const char * NLEXERR_SUCCESS = "success";
 const char * NLEXERR_CLOSING_NO_LIST = "closing a list that was never open";
 const char * NLEXERR_DOT_INSIDE_LIST = "dot wildcard is not permitted inside lists";
