@@ -1,3 +1,7 @@
+2020-12-12
+----------
+* Go back to the tree unit-testing and add unit testing.
+
 2020-11-29
 ----------
 * More separation needed between internal symbols and symbols for applications. Currently the `nan_` prefix means internal only, but they are found in headers intended for applications also.
