@@ -1,6 +1,6 @@
 CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
-DEBUGFLAGS=-D DEBUG_MODE -g
-OBJS=error.o main.o read.o tree.o
+DEBUGFLAGS=-DDEBUG -g
+OBJS=error.o graph.o main.o read.o tree.o
 
 # Use `make clean; make debug=1` to turn on the debug mode.
 ifdef debug

@@ -9,6 +9,7 @@
 #include "error.h"
 #include "read.h"
 #include "tree.h"
+#include "graph.h"
 
 int main(int argc, char * argv[])
 {
@@ -44,6 +45,7 @@ int main(int argc, char * argv[])
 	
 	#ifdef DEBUG
 		nan_tree_dump(&troot, 0);
+		nan_graph(&troot);
 		fprintf(stderr, "tree dump complete.\n");
 	#endif
 
