@@ -168,8 +168,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 						if(tptr == tcurnode)
 							continue;
 						
-						if(nan_tree_nodes_match(tptr, tcurnode) &&
-							-(tptr->ch) & NLEX_CASE_KLEENE)
+						if( nan_tree_nodes_match(tptr, tcurnode) &&
+								(-(tptr->ch) & NLEX_CASE_KLEENE) )
 						{
 							match = tptr;
 							break;

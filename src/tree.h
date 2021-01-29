@@ -45,6 +45,12 @@ typedef struct _NanTreeNode {
 	 */
   void                * ptr;
 
+	/* Points to the first node in the Kleene sub-expression (points to self
+	 * if only one node in the Kleene group.)
+	 * NULL for non-Kleene nodes.
+	 */
+	struct _NanTreeNode * klnptr;
+
 	struct _NanTreeNode * first_child;
 	struct _NanTreeNode * sibling;
 } NanTreeNode;
@@ -150,6 +156,8 @@ static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
 
 		node->ch = -NLEX_CASE_LIST;
 	}
+
+	node->klnptr = node;
 
 	node->ch = -(-(node->ch) | NLEX_CASE_KLEENE);
 }
@@ -278,6 +286,7 @@ static inline void nan_tree_init(NanTreeNode * root)
 {
 	root->first_child = NULL;
 	root->sibling     = NULL;
+	root->klnptr      = NULL;
 	root->ch          = NLEX_CASE_ROOT;
 	
 	/* ID has to be even because it is a non-action node;

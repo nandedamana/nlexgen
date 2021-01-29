@@ -63,6 +63,9 @@ void nan_graph_rec(NanTreeNode * node, FILE * fp)
 		nan_graph_rec(chld, fp);
 		fprintf(fp, "%d -> %d;\n", node->id, chld->id);
 	}
+	
+	if(node->klnptr)
+		fprintf(fp, "%d -> %d;\n", node->id, node->klnptr->id);
 }
 
 #endif
