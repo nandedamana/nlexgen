@@ -1,4 +1,4 @@
-/* graph.h
+/* plot.h
  * This file is part of nlexgen, a lexer generator.
  * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
  * File started on 2021-01-29
@@ -32,7 +32,7 @@ const char * mrkrs_s[] = { "ANYCHAR",
 	NULL
 };
 
-void nan_graph_rec(NanTreeNode * node, FILE * fp)
+void nan_plot_rec(NanTreeNode * node, FILE * fp)
 {
 	fprintf(fp, "%d", node->id);
 
@@ -60,7 +60,7 @@ void nan_graph_rec(NanTreeNode * node, FILE * fp)
 	fprintf(fp, ";\n");
 
 	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling) {
-		nan_graph_rec(chld, fp);
+		nan_plot_rec(chld, fp);
 		fprintf(fp, "%d -> %d;\n", node->id, chld->id);
 	}
 	
