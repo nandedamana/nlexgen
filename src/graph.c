@@ -27,7 +27,7 @@ void nan_graph_rec(NanTreeNode * node, FILE * fp)
 		if(-(node->ch) & NLEX_CASE_KLEENE)
 			fprintf(fp, "\nKLEENE\n");
 		
-		if(-(node->ch) & NLEX_CASE_LIST || -(node->ch) & NLEX_CASE_KLEENE) {
+		if(-(node->ch) & NLEX_CASE_LIST) {
 			fprintf(fp, "\n");
 			nan_character_list_to_expr(NAN_CHARACTER_LIST(node->ptr), "ch", fp);
 		}
