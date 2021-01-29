@@ -4,6 +4,9 @@
  * Started on 2019-07-22
  */
 
+#ifndef _N96E_LEX_TREE_H
+#define _N96E_LEX_TREE_H
+
 #include "error.h"
 #include "read.h"
 #include "types.h"
@@ -282,3 +285,5 @@ static inline void nan_tree_init(NanTreeNode * root)
 	 */
 	root->id          = 2;
 }
+
+#endif
