@@ -11,6 +11,27 @@
 
 #include "tree.h"
 
+/* XXX Keep in sync with mrkrs_s */
+const NlexCharacter mrkrs[] = { NLEX_CASE_ANYCHAR,
+	NLEX_CASE_DIGIT,
+	NLEX_CASE_EOF,
+	NLEX_CASE_WORDCHAR,
+	NLEX_CASE_LIST,
+	NLEX_CASE_INVERT,
+	NLEX_CASE_KLEENE,
+};
+
+/* XXX Keep in sync with mrkrs */
+const char * mrkrs_s[] = { "ANYCHAR",
+	"DIGIT",
+	"EOF",
+	"WORDCHAR",
+	"LIST",
+	"INVERT",
+	"KLEENE",
+	NULL
+};
+
 void nan_graph_rec(NanTreeNode * node, FILE * fp)
 {
 	fprintf(fp, "%d", node->id);
@@ -24,8 +45,9 @@ void nan_graph_rec(NanTreeNode * node, FILE * fp)
 	else {
 		fprintf(fp, "[label=\"%d: %d", node->id, node->ch);
 		
-		if(-(node->ch) & NLEX_CASE_KLEENE)
-			fprintf(fp, "\nKLEENE\n");
+		for(size_t i = 0; mrkrs_s[i]; i++)
+			if(-(node->ch) & mrkrs[i])
+				fprintf(fp, "\n%s\n", mrkrs_s[i]);
 		
 		if(-(node->ch) & NLEX_CASE_LIST) {
 			fprintf(fp, "\n");
