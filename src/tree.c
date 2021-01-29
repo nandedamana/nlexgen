@@ -361,6 +361,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 			 * But upon reaching a next-to-wildcard match, I've to remove the
 			 * Kleene state from the stack. This is to prevent 'cde' from
 			 * being consumed in 'axyzbcde' against the regex 'a*bcde'
+			 * TODO something wrong in this comment?
 			 */
 			if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE) {
 				fprintf(fpout,
