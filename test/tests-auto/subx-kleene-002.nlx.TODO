@@ -1,0 +1,4 @@
+a(bc)*d	{ printf("aBC*d-"); }
+a(b)*d	{ printf("aB*d-"); }
+a(bcd)*e	{ printf("aBCD*d-"); }
+.*	{ printf("OTHER-"); }

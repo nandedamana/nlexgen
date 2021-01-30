@@ -1,2 +1,3 @@
 tests-auto/**/*.c
 tests-auto/**/*.elf
+tests-auto/**/*~

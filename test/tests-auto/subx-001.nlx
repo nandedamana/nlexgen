@@ -1,4 +1,4 @@
 a(bc)d	{ printf("abcd-"); }
 a(b*)d	{ printf("aBKLNSd-"); }
 (x)	{ printf("x-"); }
-.	
+.*	{ printf("OTHER-"); }

@@ -186,9 +186,12 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed);
 
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
 
-static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
+static inline void
+	nan_tree_node_convert_to_kleene(NanTreeNode * node, NanTreeNode * parent)
 {
-	node->klnptr = node;
+	assert(node);
+	assert(parent);
+	node->klnptr = parent;
 }
 
 /* Conversion of intermediate nodes */

@@ -64,7 +64,7 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 	}
 	
 	if(node->klnptr)
-		fprintf(fp, "%d -> %d;\n", node->id, node->klnptr->id);
+		fprintf(fp, "%d -> %d [label=\"*\"];\n", node->id, node->klnptr->id);
 }
 
 #endif

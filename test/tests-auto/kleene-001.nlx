@@ -1,1 +1,2 @@
 ab*c	printf("aBKLNc-");
+.*	printf("OTHER-");
