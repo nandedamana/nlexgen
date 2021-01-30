@@ -55,6 +55,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	_Bool         start_subx = 0;
 	_Bool         join_or = 0;
 
+	bool          force_newnode_for_next_char = false;
+
 	NanCharacterList * chlist;
 
 	nan_treenode_init(root);
@@ -144,6 +146,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				
 				/* Select the new head */
 				tcurnode = lastsubxparent; // TODO pop from a stack
+
+				/* or a node could have itself as its sibling */
+				force_newnode_for_next_char = true;
 				
 				continue;
 			}
@@ -282,6 +287,15 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			tptr_prv = tcurnode->first_child;
 			lastsubxparent = tcurnode; // TODO push to a stack to support nested sub-expressions
 			start_subx = 0;
+		}
+		else if(force_newnode_for_next_char) {
+			force_newnode_for_next_char = false;
+
+			NanTreeNode * tptr;
+			
+			/* Code below depends on tptr_prv being the last child */
+			for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling)
+				tptr_prv = tptr;
 		}
 		else {
 			NanTreeNode * tptr;
