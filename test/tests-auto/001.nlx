@@ -1,0 +1,2 @@
+a	{ printf("a-"); }
+b	{ printf("b-"); }
