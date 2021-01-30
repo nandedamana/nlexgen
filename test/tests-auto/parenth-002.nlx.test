@@ -1,0 +1,7 @@
+(	lpar-
+)	rpar-
+((	lpar-lpar-
+))	rpar-rpar-
+a(b))	a-lpar-rpar-rpar-
+x	
+x)	rpar-
