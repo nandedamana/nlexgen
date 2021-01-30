@@ -44,7 +44,6 @@ int main(int argc, char * argv[])
 	//#define DEBUG 1
 	
 	#ifdef DEBUG
-		nan_tree_dump(&troot, 0);
 		nan_plot(&troot);
 		fprintf(stderr, "tree dump complete.\n");
 	#endif

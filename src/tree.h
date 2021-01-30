@@ -306,36 +306,4 @@ static inline _Bool
 	return matches;
 }
 
-/* TODO only for debug mode; make non-inline */
-static inline void nan_tree_dump_rec(NanTreeNode * root, signed int level)
-{
-	NanTreeNode * tptr;
-
-	if(root->visited)
-		return;
-	else
-		root->visited = true;
-
-	int i;
-	for(i = 0; i < level; i++)
-		fprintf(stderr, "-");
-
-	/* Printing root separately can be helpful if root is an inavlid address.
-	 * Otherwise segfault will hide the information.
-	 */
-	fprintf(stderr, "%p ", root);
-	fprintf(stderr, "ch=%d (id = %d)\n", root->ch, nan_tree_node_id(root));
-
-	level++;
-
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_dump_rec(tptr, level);
-}
-
-static inline void nan_tree_dump(NanTreeNode * root, signed int level)
-{
-	nan_tree_unvisit(root);
-	nan_tree_dump_rec(root, level);
-}
-
 #endif
