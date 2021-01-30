@@ -315,8 +315,10 @@ static inline void nan_tree_assign_node_ids_rec(NanTreeNode * node)
 
 	nan_tree_node_id(node);
 
-	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling)
+	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling) {
+		assert(chld != chld->sibling);
 		nan_tree_assign_node_ids_rec(chld);
+	}
 }
 
 static inline void nan_tree_assign_node_ids(NanTreeNode * root)
