@@ -1,4 +1,4 @@
-(	{ printf("lpar-"); }
-)	{ printf("rpar-"); }
+\(	{ printf("lpar-"); }
+\)	{ printf("rpar-"); }
 a	{ printf("a-"); }
 .	
