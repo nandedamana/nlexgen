@@ -271,6 +271,7 @@ static inline void nan_treenode_init(NanTreeNode * root)
 {
 	root->first_child = NULL;
 	root->sibling     = NULL;
+	root->ptr         = NULL;
 	root->klnptr      = NULL;
 	root->id          = 0;
 }
