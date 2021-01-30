@@ -23,7 +23,7 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
 			"nh->bufptr = nh->buf + nh->lastmatchat;\n%s\n}\n",
 			nan_tree_node_id(root),
-			(char *) root->ptr);
+			nan_treenode_get_actstr(root));
 
 		return;
 	}
@@ -327,7 +327,9 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 				else
 					fprintf(fpout, "(");
 				
-				nan_character_list_to_expr(NAN_CHARACTER_LIST(tptr->ptr), "ch", fpout);
+				nan_character_list_to_expr(
+					nan_treenode_get_charlist(tptr), "ch", fpout);
+
 				printed = 1;
 			}
 			else if(tptr->ch == NLEX_CASE_ACT) {

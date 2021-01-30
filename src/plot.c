@@ -47,9 +47,10 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 			if(-(node->ch) & mrkrs[i])
 				fprintf(fp, "\n%s\n", mrkrs_s[i]);
 		
-		if(-(node->ch) & NLEX_CASE_LIST) {
+		if( (node->ch < 0) && (-(node->ch) & NLEX_CASE_LIST) ) {
 			fprintf(fp, "\n");
-			nan_character_list_to_expr(NAN_CHARACTER_LIST(node->ptr), "ch", fp);
+			nan_character_list_to_expr(
+				nan_treenode_get_charlist(node), "ch", fp);
 		}
 
 		fprintf(fp, "\"]");
