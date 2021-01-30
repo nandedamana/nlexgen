@@ -306,4 +306,23 @@ static inline _Bool
 	return matches;
 }
 
+static inline void nan_tree_assign_node_ids_rec(NanTreeNode * node)
+{
+	if(node->visited)
+		return;
+	else
+		node->visited = true;
+
+	nan_tree_node_id(node);
+
+	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling)
+		nan_tree_assign_node_ids_rec(chld);
+}
+
+static inline void nan_tree_assign_node_ids(NanTreeNode * root)
+{
+	nan_tree_unvisit(root);
+	nan_tree_assign_node_ids_rec(root);
+}
+
 #endif

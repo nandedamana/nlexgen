@@ -36,6 +36,8 @@ int main(int argc, char * argv[])
 	if(err != NLEXERR_SUCCESS)
 		nlex_die(err);
 
+	nan_tree_assign_node_ids(&troot);
+
 	fpout = stdout;
 
 	/* BEGIN Code Generation */
