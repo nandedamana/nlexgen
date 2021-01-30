@@ -63,10 +63,11 @@ typedef struct _NanCharacterList {
 
 static inline void nan_tree_unvisit(NanTreeNode * root)
 {
-	root->visited = false;
-	
 	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_unvisit(tptr);
+		if(root->visited)
+			nan_tree_unvisit(tptr);
+
+	root->visited = false;
 }
 
 static inline void nan_treenode_init(NanTreeNode * root)
