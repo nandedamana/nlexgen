@@ -111,11 +111,10 @@ static inline NanCharacterList *
 
 	nclist = nan_character_list_new();
 
-	NAN_CHARACTER_LIST(nclist)->list =
-		nlex_malloc(NULL, sizeof(NlexCharacter));
+	nclist->list = nlex_malloc(NULL, sizeof(NlexCharacter));
 
-	NAN_CHARACTER_LIST(nclist)->list[0] = c;
-	NAN_CHARACTER_LIST(nclist)->count   = 1;
+	nclist->list[0] = c;
+	nclist->count   = 1;
 	
 	return nclist;
 }
