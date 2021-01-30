@@ -65,6 +65,10 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
  */
 int nlex_next(NlexHandle * nh)
 {
+	#ifdef DEBUG
+	fprintf(stderr, "nlex_next() called.\n");
+	#endif
+
 	_Bool  eof_read   = 0;
 	size_t bytes_read;
 
