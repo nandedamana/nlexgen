@@ -23,11 +23,6 @@
 #define NLEX_CASE_LIST     128
 #define NLEX_CASE_INVERT   512
 
-/* Will be ORed with NanTreeNode.ch for lists.
- * Single character nodes will be converted to lists to enable Kleene.
- */
-#define NLEX_CASE_KLEENE   256
-
 #define NAN_CHARACTER_LIST(x) ((NanCharacterList *) (x))
 
 /* XXX 'Nan' prefix is used to distinguish internal components from
@@ -147,19 +142,9 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed);
 
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
 
-// TODO make non-inline
 static inline void nan_tree_node_convert_to_kleene(NanTreeNode * node)
 {
-	if(node->ch >= 0) { /* Single char */
-		/* Convert to list */
-		node->ptr = nan_character_list_new_from_character(node->ch);
-
-		node->ch = -NLEX_CASE_LIST;
-	}
-
 	node->klnptr = node;
-
-	node->ch = -(-(node->ch) | NLEX_CASE_KLEENE);
 }
 
 /* Conversion of intermediate nodes */
@@ -282,17 +267,21 @@ static inline void nan_tree_dump(NanTreeNode * root, signed int level)
 		nan_tree_dump(tptr, level);
 }
 
-static inline void nan_tree_init(NanTreeNode * root)
+static inline void nan_treenode_init(NanTreeNode * root)
 {
 	root->first_child = NULL;
 	root->sibling     = NULL;
 	root->klnptr      = NULL;
-	root->ch          = NLEX_CASE_ROOT;
+	root->id          = 0;
+}
+
+static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
+{
+	NanTreeNode * newnode = nlex_malloc(nh, sizeof(NanTreeNode));
+	nan_treenode_init(newnode);
+	newnode->ch = ch;
 	
-	/* ID has to be even because it is a non-action node;
-	 * 0 cannot be used because it is a marker (do-not-care cases).
-	 */
-	root->id          = 2;
+	return newnode;
 }
 
 #endif

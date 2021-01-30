@@ -47,7 +47,13 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 	NanCharacterList * chlist;
 
-	nan_tree_init(root);
+	nan_treenode_init(root);
+	root->ch          = NLEX_CASE_ROOT;
+	
+	/* ID has to be even because it is a non-action node;
+	 * 0 cannot be used because it is a marker (do-not-care cases).
+	 */
+	root->id          = 2;
 
 	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
 		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
@@ -57,9 +63,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			while((ch = nlex_next(nh)) && (ch != '\n' && ch != EOF));
 			
 			/* BEGIN Create/attach the action node to the tree */
-			NanTreeNode * anode = nlex_malloc(NULL, sizeof(NanTreeNode));
-			anode->id = 0;
-			anode->ch = NLEX_CASE_ACT;
+			NanTreeNode * anode = nan_treenode_new(nh, NLEX_CASE_ACT);
 
 			/* Copy the action. */
 			anode->ptr = (void *) nlex_bufdup(nh, 1);
@@ -168,8 +172,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 						if(tptr == tcurnode)
 							continue;
 						
-						if( nan_tree_nodes_match(tptr, tcurnode) &&
-								(-(tptr->ch) & NLEX_CASE_KLEENE) )
+						if( nan_tree_nodes_match(tptr, tcurnode) && tptr->klnptr )
 						{
 							match = tptr;
 							break;
@@ -240,9 +243,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 		NanTreeNode * tptr;
 		
 		/* A temporary node to make the comparison easier */
-		NanTreeNode * tmpnode = nlex_malloc(NULL, sizeof(NanTreeNode));
+		NanTreeNode * tmpnode = nan_treenode_new(nh, ch);
 
-		tmpnode->ch  = ch;
 		/* No problem if chlist is invalid since
 		 * ch will not be NLEX_CASE_LIST in that case.
 		 */
@@ -253,9 +255,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 		for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling) {
 			tptr_prv = tptr;
 
-			if( nan_tree_nodes_match(tptr, tmpnode) &&
-				(tptr->ch >= 0 || !(-(tptr->ch) & NLEX_CASE_KLEENE)) ) /* Not a Kleene */
-			{
+			if( nan_tree_nodes_match(tptr, tmpnode) && NULL == tptr->klnptr ) {
 				tmatching_node = tptr;
 				break;
 			}
@@ -268,9 +268,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			tcurnode        = tmatching_node;
 		}
 		else { /* Create a new node */
-			NanTreeNode * newnode = nlex_malloc(NULL, sizeof(NanTreeNode));
-			newnode->id           = 0;
-			newnode->ch           = ch;
+			NanTreeNode * newnode = nan_treenode_new(nh, ch);
 			
 			/* Again, no problem if chlist is invalid since
 			 * ch will not be NLEX_CASE_LIST in that case.
@@ -309,11 +307,11 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));
 
 		/* Bypass */
-		if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE)
+		if(root->klnptr)
 			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(grandparent));
 		
 		/* Self loop */
-		if(tptr->ch < 0 && -(tptr->ch) & NLEX_CASE_KLEENE)
+		if(tptr->klnptr)
 			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(tptr));
 
 		_Bool printed = 0;
@@ -363,7 +361,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 			 * being consumed in 'axyzbcde' against the regex 'a*bcde'
 			 * TODO something wrong in this comment?
 			 */
-			if(root->ch < 0 && -(root->ch) & NLEX_CASE_KLEENE) {
+			if(root->klnptr) {
 				fprintf(fpout,
 					/* checking again to skip grandparents */
 					"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",

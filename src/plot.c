@@ -18,7 +18,6 @@ const NlexCharacter mrkrs[] = { NLEX_CASE_ANYCHAR,
 	NLEX_CASE_WORDCHAR,
 	NLEX_CASE_LIST,
 	NLEX_CASE_INVERT,
-	NLEX_CASE_KLEENE,
 };
 
 /* XXX Keep in sync with mrkrs */
@@ -28,7 +27,6 @@ const char * mrkrs_s[] = { "ANYCHAR",
 	"WORDCHAR",
 	"LIST",
 	"INVERT",
-	"KLEENE",
 	NULL
 };
 
