@@ -93,6 +93,7 @@ int main(int argc, char * argv[])
 		"\tfprintf(stderr, "
 		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
 #endif
+	nan_tree_unvisit(&troot);
 	nan_tree_istates_to_code(&troot, NULL);
 	fprintf(fpout, "\n}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
@@ -102,6 +103,7 @@ int main(int argc, char * argv[])
 		"\tfprintf(stderr, "
 		"\t\t\"enterng anode comparison with nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
 #endif
+	nan_tree_unvisit(&troot);
 	nan_tree_astates_to_code(&troot, 0);
 
 	/* END Code Generation */

@@ -14,6 +14,11 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
 
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
+
 	if(root->ch == NLEX_CASE_ACT) {
 		if(if_printed)
 			fprintf(fpout, "else ");
@@ -41,12 +46,14 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanTreeNode * tcurnode_parent = NULL;
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
+	NanTreeNode * subexptailbak = NULL;
 
 	NlexCharacter ch;
 	_Bool         escaped = 0;
 	_Bool         in_list = 0; /* [] */
 	_Bool         list_inverted;
 	_Bool         start_subx = 0;
+	_Bool         join_or = 0;
 
 	NanCharacterList * chlist;
 
@@ -119,8 +126,25 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				continue;
 			}
 			else if(ch == ')') {
-				klndest = lastsubxparent; // TODO pop from a stack
 				// TODO check if balanced
+				
+				klndest = lastsubxparent; // TODO pop from a stack
+
+				join_or = 1;
+
+				continue;
+			}
+			else if(ch == '|') {
+				// TODO check if allowed
+
+				/* For rejoining later */
+				// TODO insert into a queue to allow multiple ORs
+				// TODO also, keep a stack of these queues to support nested sub-expressions?
+				subexptailbak = tcurnode;
+				
+				/* Select the new head */
+				tcurnode = lastsubxparent; // TODO pop from a stack
+				
 				continue;
 			}
 			else if(ch == ']') {
@@ -309,6 +333,26 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			/* For the next character, this node will be the parent */
 			tcurnode = newnode;
 		}
+		
+		if(join_or) {
+			if(subexptailbak) { // TODO remove from a queue
+				if(subexptailbak->first_child == NULL) {
+					subexptailbak->first_child = tcurnode;
+				}
+				else {
+					for(NanTreeNode * nptr = subexptailbak->first_child; nptr; nptr = nptr->sibling) {
+						if(nptr->sibling == NULL) {
+							nptr->sibling = tcurnode;
+							break;
+						}
+					}
+				}
+
+				subexptailbak = NULL;
+			}
+
+			join_or = 0;
+		}
 	}
 
 	if(in_list)
@@ -326,6 +370,11 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 {
 	NanTreeNode * tptr;
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));

@@ -8,6 +8,7 @@
 #define _N96E_LEX_TREE_H
 
 #include <assert.h>
+#include <stdbool.h>
 #include "error.h"
 #include "read.h"
 #include "types.h"
@@ -49,6 +50,9 @@ typedef struct _NanTreeNode {
 
 	struct _NanTreeNode * first_child;
 	struct _NanTreeNode * sibling;
+	
+	/* Because this is a graph and a node can have multiple parents */
+	bool visited;
 } NanTreeNode;
 
 /* To match multiple characters at a time */
@@ -56,6 +60,14 @@ typedef struct _NanCharacterList {
 	NlexCharacter * list;
 	size_t          count;
 } NanCharacterList;
+
+static inline void nan_tree_unvisit(NanTreeNode * root)
+{
+	root->visited = false;
+	
+	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_unvisit(tptr);
+}
 
 static inline void nan_treenode_init(NanTreeNode * root)
 {

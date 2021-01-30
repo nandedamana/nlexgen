@@ -1,0 +1,2 @@
+a([bcd]|m)e	printf("aBCDorMe-");
+.*	printf("OTHER-");

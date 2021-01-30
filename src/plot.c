@@ -32,13 +32,23 @@ const char * mrkrs_s[] = { "ANYCHAR",
 
 void nan_plot_rec(NanTreeNode * node, FILE * fp)
 {
+	if(node->visited)
+		return;
+	else
+		node->visited = true;
+
 	fprintf(fp, "%d", node->id);
 
 	if(isprint(node->ch)) {
-		if(node->ch == '"')
+		if(node->ch == '"') {
 			fprintf(fp, "[label=\"%d: '\\\"'\"]", node->id);
-		else
+		}
+		else if(node->ch == '\\') {
+			fprintf(fp, "[label=\"%d: '\\\\'\"]", node->id);
+		}
+		else {
 			fprintf(fp, "[label=\"%d: '%c'\"]", node->id, node->ch);
+		}
 	}
 	else {
 		fprintf(fp, "[label=\"%d: %d", node->id, node->ch);

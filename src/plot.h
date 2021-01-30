@@ -21,6 +21,8 @@ static inline void nan_plot(NanTreeNode * root)
 		exit(EXIT_FAILURE);
 	}
 
+	nan_tree_unvisit(root);
+
 	fprintf(fp, "digraph {\n");
 	nan_plot_rec(root, fp);
 	fprintf(fp, "}\n");
