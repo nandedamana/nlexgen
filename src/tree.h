@@ -305,10 +305,15 @@ static inline _Bool
 	return matches;
 }
 
-/* TODO only for debug mode; make non inline */
-static inline void nan_tree_dump(NanTreeNode * root, signed int level)
+/* TODO only for debug mode; make non-inline */
+static inline void nan_tree_dump_rec(NanTreeNode * root, signed int level)
 {
 	NanTreeNode * tptr;
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
 
 	int i;
 	for(i = 0; i < level; i++)
@@ -323,7 +328,13 @@ static inline void nan_tree_dump(NanTreeNode * root, signed int level)
 	level++;
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_dump(tptr, level);
+		nan_tree_dump_rec(tptr, level);
+}
+
+static inline void nan_tree_dump(NanTreeNode * root, signed int level)
+{
+	nan_tree_unvisit(root);
+	nan_tree_dump_rec(root, level);
 }
 
 #endif
