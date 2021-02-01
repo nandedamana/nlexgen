@@ -1,5 +1,8 @@
 ""	STR-
 "a"	STR-
 "ab"	STR-
+"a\""	STR-
 "a\"b"	STR-
+"\"ab"	STR-
+"\"ab\""	STR-
 test	OTHER-

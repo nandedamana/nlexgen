@@ -47,8 +47,10 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
 	NanTreeNode * subexptailbak = NULL;
+	NanTreeNode * subexptailbak_for_kln = NULL;
 
 	NlexCharacter ch;
+	NlexCharacter prvch;
 	_Bool         escaped = 0;
 	_Bool         in_list = 0; /* [] */
 	_Bool         list_inverted;
@@ -91,7 +93,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			/* Reset the tree pointer */
 			tcurnode = root;
 			
-			continue;
+			goto nextiter;
 		}
 		/* TODO can I avoid this [redundant] comparison? */
 		/* XXX `*else* if` is unnecessary since `continue` is used above.
@@ -110,7 +112,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 		else {
 			if(ch == '\\') {
 				escaped = 1;
-				continue;
+				goto nextiter;
 			}
 			else if(ch == '[') {
 				if(in_list)
@@ -120,12 +122,12 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				list_inverted = 0;
 				in_list       = 1;
 
-				continue;
+				goto nextiter;
 			}
 			else if(ch == '(') {
 				start_subx = 1;
 				// TODO push to the subx stack
-				continue;
+				goto nextiter;
 			}
 			else if(ch == ')') {
 				// TODO check if balanced
@@ -134,7 +136,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 				join_or = 1;
 
-				continue;
+				goto nextiter;
 			}
 			else if(ch == '|') {
 				// TODO check if allowed
@@ -143,6 +145,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				// TODO insert into a queue to allow multiple ORs
 				// TODO also, keep a stack of these queues to support nested sub-expressions?
 				subexptailbak = tcurnode;
+				subexptailbak_for_kln = tcurnode;
 				
 				/* Select the new head */
 				tcurnode = lastsubxparent; // TODO pop from a stack
@@ -150,7 +153,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				/* or a node could have itself as its sibling */
 				force_newnode_for_next_char = true;
 				
-				continue;
+				goto nextiter;
 			}
 			else if(ch == ']') {
 				if(!in_list)
@@ -171,7 +174,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				
 				list_inverted = 1;
 				
-				continue;
+				goto nextiter;
 			}
 			else if(ch == '.') {
 				if(in_list)
@@ -192,6 +195,11 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				}
 				*/
 
+				if(prvch == ')' && subexptailbak_for_kln) {
+					nan_tree_node_convert_to_kleene(subexptailbak_for_kln, klndest);
+					subexptailbak_for_kln = NULL;
+				}
+
 				/* Check if curnode has children. If no, 'a' was not used before 'a*';
 				 * this means I can directly use it.
 				 * Otherwise, I have to create a sibling.
@@ -202,6 +210,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 					nan_tree_node_convert_to_kleene(tcurnode, klndest);
 				}
 				else {
+					/* TODO no need to do this for sub-expressions since they'll have exclusive branches anyway? */
 					/* Look for a sibling that has the same content but is a Kleene.
 					 * If not found,
 					 * create a copy, convert it to Kleene and add as sibling.
@@ -212,7 +221,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 					
 					for(tptr = tcurnode_parent->first_child; tptr; tptr = tptr->sibling) {
 						if(tptr == tcurnode)
-							continue;
+							goto nextiter;
 						
 						if( nan_tree_nodes_match(tptr, tcurnode) && tptr->klnptr )
 						{
@@ -223,7 +232,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 					
 					if(match) { /* Kleene sibling found */
 						tcurnode = tptr;
-						continue;
+						goto nextiter;
 					}
 					else { /* Kleene sibling NOT found */
 						/* Clone and make it Kleene */
@@ -243,7 +252,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				}
 
 				/* Skipping the rest because no new node is to be added */
-				continue;
+				goto nextiter;
 			}
 			else if(ch == '+') { /* Kleene plus */
 				if(tcurnode == root)
@@ -268,13 +277,13 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				tcurnode = newnode;
 				
 				/* Skip the rest since no new node is to be added. */
-				continue;
+				goto nextiter;
 			}
 		}
 
 		if(in_list) {
 			nan_character_list_append(chlist, ch);
-			continue;
+			goto nextiter;
 		}
 
 		NanTreeNode * tmatching_node = NULL;
@@ -367,6 +376,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 			join_or = 0;
 		}
+		
+nextiter:
+		prvch = ch;
 	}
 
 	if(in_list)

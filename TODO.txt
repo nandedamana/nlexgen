@@ -1,3 +1,7 @@
+2021-02-01
+----------
+* tests-auto: check token length also. some tests got passed incorrectly due to the lack of this.
+
 2020-12-12
 ----------
 * Go back to the tree unit-testing and add unit testing.
