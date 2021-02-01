@@ -20,11 +20,14 @@ error.h: errmap.tsv error.h.top
 	awk -F "\t" '{print "extern const char * "$$1";"}' errmap.tsv >> error.h
 	echo '#endif' >> error.h
 
-%.o: %.c *.h error.h
+types.h: types.ngg
+	ngg -oh types.h -oc /dev/null --c-include-guard _N96E_LEX_TYPES_H types.ngg
+
+%.o: %.c *.h types.h error.h
 	cc $(CFLAGS) -c $<
 
 nlexgen:$(OBJS)
 	cc $(CFLAGS) -o nlexgen $(OBJS)
 
 clean:
-	rm -f nlexgen *.o error.[ch]
+	rm -f nlexgen *.o error.[ch] types.h

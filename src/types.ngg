@@ -1,0 +1,70 @@
+// types.ngg
+// This file is part of nlexgen, a lexer generator.
+// Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+// File started on 2021-01-32, migrating C code.
+
+alias for int NlexCharacter; // Negative values are for special cases
+// TODO rem once the above code produced typedef
+vh typedef int NlexCharacter;
+
+enum NlexErr
+	NONE 0,
+	MALLOC,
+	REALLOC,
+	READING
+;
+
+alias for uint NanTreeNodeId;
+// TODO rem once the above code produced typedef
+vh typedef unsigned int NanTreeNodeId;
+
+shadow function NlexErrCallback     takes nh NlexHandle, errno NlexErr;
+shadow function NlexConsumeCallback takes nh NlexHandle;
+
+class NlexHandle
+	// Parameters that can only be set before calling nlex_init()
+	// (if unset, will be initialized by nlex_init())
+	var buf_alloc_unit size;
+	
+	// Parameters that can be set anytime
+	var on_error     NlexErrCallback;
+	var on_consume   NlexConsumeCallback;
+	var userdata     pointer;
+
+	// Set by nlex_init()
+	var fp  stream;
+	var buf mstring;
+	
+	// Everything below are set and modified by the lexer
+	
+	var bufptr       mstring; // Points to the character in consideration
+	var bufendptr    mstring; // Where the next block of the input can be appended
+	var lastmatchat  size; // I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr.
+
+	// Set to true if EOF has reached and the buffer was appended with 0
+	var eof_read bool;
+	
+	// Auxilliary buffer, user-defined purpose TODO needed actually?
+	var auxbuf     mstring;
+	var auxbufptr  mstring; // Next byte to write
+	var auxbufend  mstring; // Precalculated for efficient comparison
+	
+	var curstate             NanTreeNodeId;
+	var last_accepted_state  NanTreeNodeId;
+	
+	// 'this stack' and 'next stack' (stacks holding the states for
+	// this iteration and the next.
+	// size_t chosen because currently states are identified using compile-time
+	// addresses.
+//	var tstack         array of NanTreeNodeId;
+	var tstack array of uint; // TODO FIXME
+	var tstack_top     size; // 0 => empty, 1 is the bottom
+//	var nstack         array of NanTreeNodeId;
+	var nstack array of uint; // TODO FIXME
+	var nstack_top     size;
+
+	var done bool; // TODO rem?
+	
+	// For custom data (will not be initialized to NULL by nlex_*())
+	var data pointer;
+;
