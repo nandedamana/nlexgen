@@ -10,12 +10,12 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
-void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
+bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
 
 	if(root->visited)
-		return;
+		return if_printed;
 	else
 		root->visited = true;
 
@@ -30,14 +30,17 @@ void nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 			nan_tree_node_id(root),
 			nan_treenode_get_actstr(root));
 
-		return;
+		return 1;
 	}
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		nan_tree_astates_to_code(tptr, if_printed);
+		/* `|=` because the recursive call my return 0 but
+		 * I don't want to lose the current value if it is 1.
+		 */
+		if_printed |= nan_tree_astates_to_code(tptr, if_printed);
 	}
 	
-	return;
+	return if_printed;
 }
 
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
