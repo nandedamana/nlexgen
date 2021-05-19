@@ -208,7 +208,7 @@ static inline void
 }
 
 /* Conversion of intermediate nodes */
-void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent);
+void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed);
 
 static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
 {

@@ -95,7 +95,7 @@ int main(int argc, char * argv[])
 		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
 #endif
 	nan_tree_unvisit(&troot);
-	nan_tree_istates_to_code(&troot, NULL);
+	nan_tree_istates_to_code(&troot, 0);
 	fprintf(fpout, "\n}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
 		"}\n");

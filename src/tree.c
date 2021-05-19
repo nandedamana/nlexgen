@@ -395,33 +395,44 @@ nextiter:
  * This was to make the longest rule preferable (on collision), IIRC.
  * TODO do more research.
  */
-// TODO rem param grandparent
-void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
+void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed)
 {
-	NanTreeNode * tptr;
+	// TODO make the branching better
+
+	NanTreeNode * tptr = NULL;
 
 	if(root->visited)
 		return;
 	else
 		root->visited = true;
 
+	/* TODO FIXME
+	 * Can't print `else` like this because it'll cause some
+	 * valid branches to be missed sometimes when there is `||`.
+	 * See tests-auto/kleene-001.nlx
+	 * One branch is `} else if (nh->curstate == 4) {`
+	 * while another is `} else if (nh->curstate == 6 || nh->curstate == 4) {`.
+	if(if_printed)
+		fprintf(fpout, "else ");
+	else
+		if_printed = 1;
+	 */
+
+	fprintf(fpout, "if(nh->curstate == %d", nan_tree_node_id(root));
+
+	/* Bypass */
+	if(root->klnptr)
+		fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(root->klnptr));
+
+	fprintf(fpout, ") {\n");
+
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		fprintf(fpout, "if((nh->curstate == %d", nan_tree_node_id(root));
-
-		/* Bypass */
-		if(root->klnptr)
-//			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(grandparent));
-// TODO
-			fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(root->klnptr));
-
 		_Bool printed = 0;
 
-// TODO make the branching better
+		fprintf(fpout, "if( ");
 
 		if(tptr->ch < 0) { /* Special cases */
 			if(-(tptr->ch) & NLEX_CASE_LIST) {
-				fprintf(fpout, ") && ");
-
 				if(-(tptr->ch) & NLEX_CASE_INVERT)
 					fprintf(fpout, "!(");
 				else
@@ -430,24 +441,24 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 				nan_character_list_to_expr(
 					nan_treenode_get_charlist(tptr), "ch", fpout);
 
+				fprintf(fpout, ")");
 				printed = 1;
 			}
 			else if(tptr->ch == NLEX_CASE_ACT) {
 // TODO FIXME
-//				fprintf(fpout, ") && nlex_nstack_is_empty(nh");
+//				fprintf(fpout, "nlex_nstack_is_empty(nh");
 
 // TODO FIXME enabling again for semicolon in nguigen
-				fprintf(fpout, ") && (1");
+				fprintf(fpout, "1");
 				printed = 1;
 			}
 		}
 
 		if(!printed) {
-			fprintf(fpout, ") && (");
 			nan_character_print_c_comp(tptr->ch, "ch", fpout);
 		}
 
-		fprintf(fpout, ")) {\n");
+		fprintf(fpout, " ) {\n");
 
 		if(tptr->ch == NLEX_CASE_ACT) {
 			fprintf(fpout,
@@ -484,8 +495,12 @@ void nan_tree_istates_to_code(NanTreeNode * root, NanTreeNode * grandparent)
 		}
 
 		fprintf(fpout, "}\n");
-		nan_tree_istates_to_code(tptr, root);
 	}
-	
+
+	fprintf(fpout, "}\n");
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_istates_to_code(tptr, 1);
+
 	return;
 }
