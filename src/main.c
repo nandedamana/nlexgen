@@ -95,7 +95,14 @@ int main(int argc, char * argv[])
 		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
 #endif
 	nan_tree_unvisit(&troot);
-	nan_tree_istates_to_code(&troot, 0);
+	nan_tree_istates_to_code(&troot);
+	/* `goto L_after_istates;` is printed by nan_tree_istates_to_code().
+	 * Thought it is more future-proof than printing `continue` there.
+	 */
+	fprintf(fpout, "L_after_istates:\n");
+	fprintf(fpout, "0;\n"); /* Because the C compiler complains
+	                         * "label at end of compound statement"
+	                         */
 	fprintf(fpout, "\n}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
 		"}\n");

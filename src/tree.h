@@ -48,6 +48,9 @@ typedef struct _NanTreeNode {
 	 */
 	struct _NanTreeNode * klnptr;
 
+	/* Whether some other node's klnptr points to this node */
+	bool is_pointed_by_kleene;
+
 	struct _NanTreeNode * first_child;
 	struct _NanTreeNode * sibling;
 	
@@ -76,7 +79,17 @@ static inline void nan_treenode_init(NanTreeNode * root)
 	root->sibling     = NULL;
 	root->ptr         = NULL;
 	root->klnptr      = NULL;
+	root->is_pointed_by_kleene = false;
 	root->id          = 0;
+}
+
+static inline void
+	nan_treenode_set_klnptr(NanTreeNode * node, NanTreeNode * klnptr)
+{
+	node->klnptr = klnptr;
+
+	if(klnptr)
+		klnptr->is_pointed_by_kleene = true;
 }
 
 static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
@@ -204,11 +217,11 @@ static inline void
 {
 	assert(node);
 	assert(parent);
-	node->klnptr = parent;
+	nan_treenode_set_klnptr(node, parent);
 }
 
 /* Conversion of intermediate nodes */
-void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed);
+void nan_tree_istates_to_code(NanTreeNode * root);
 
 static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
 {

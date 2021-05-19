@@ -395,7 +395,7 @@ nextiter:
  * This was to make the longest rule preferable (on collision), IIRC.
  * TODO do more research.
  */
-void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed)
+void nan_tree_istates_to_code(NanTreeNode * root)
 {
 	// TODO make the branching better
 
@@ -406,12 +406,14 @@ void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed)
 	else
 		root->visited = true;
 
-	/* TODO FIXME
+	/* WHY-NOT-ELSE
 	 * Can't print `else` like this because it'll cause some
 	 * valid branches to be missed sometimes when there is `||`.
 	 * See tests-auto/kleene-001.nlx
 	 * One branch is `} else if (nh->curstate == 4) {`
 	 * while another is `} else if (nh->curstate == 6 || nh->curstate == 4) {`.
+	 * Solution: see WHY-NOT-ELSE-SOLN below
+	// `if_printed` taken as arg to this fun
 	if(if_printed)
 		fprintf(fpout, "else ");
 	else
@@ -497,10 +499,14 @@ void nan_tree_istates_to_code(NanTreeNode * root, _Bool if_printed)
 		fprintf(fpout, "}\n");
 	}
 
+	/* WHY-NOT-ELSE-SOLN: see WHY-NOT-ELSE above */
+	if( !(root->klnptr) && !(root->is_pointed_by_kleene) )
+		fprintf(fpout, "goto L_after_istates;\n");
+
 	fprintf(fpout, "}\n");
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_istates_to_code(tptr, 1);
+		nan_tree_istates_to_code(tptr);
 
 	return;
 }
