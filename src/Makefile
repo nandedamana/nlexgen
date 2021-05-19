@@ -6,7 +6,7 @@ OBJS=error.o plot.o main.o read.o tree.o
 ifdef debug
   CFLAGS += $(DEBUGFLAGS)
 else
-  CFLAGS += -s # strip
+  CFLAGS += -O3 -s
 endif
 
 default:nlexgen
