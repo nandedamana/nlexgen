@@ -113,7 +113,6 @@ static inline char * nlex_bufdup(NlexHandle * nh, size_t offset)
 
 
 /**
- * Call free() on buffers
  * @param free_tokbuf Usually false because you might have copied tokbuf without strcpy() or strdup()
  */
 static inline void nlex_destroy(NlexHandle * nh)
@@ -121,6 +120,8 @@ static inline void nlex_destroy(NlexHandle * nh)
 	/* nh->fp is NULL means buf was given by the user and should not be freed. */
 	if(nh->fp)
 		free(nh->buf);
+
+	free(nh);
 }
 
 /* Call nlex_destroy() and then set the pointer to NULL */
