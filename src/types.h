@@ -10,6 +10,11 @@ typedef enum NlexErr {
 	NLEX_ERR_READING,
 } NlexErr;
 
+typedef struct NlexNString {
+	const char * buf;
+	size_t len;
+} NlexNString;
+
  typedef unsigned int NanTreeNodeId;
 
 typedef struct NlexHandle {

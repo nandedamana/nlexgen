@@ -97,20 +97,34 @@ static inline void nlex_auxbuf_terminate(NlexHandle * nh)
 	nlex_auxbuf_append(nh, '\0');
 }
 
+/* Returns the information regarding the buffer upto
+ * the last-matched character.
+ */
+static inline NlexNString
+	nlex_bufdup_info(NlexHandle * nh, size_t offset)
+{
+	NlexNString ns;
+
+	ns.buf = nh->buf + offset;
+	ns.len = nh->bufptr - nh->buf + 1 - offset;
+
+	return ns;
+}
+
 /* Makes a copy of the buffer upto the last-matched character
  * appended with a nullchar.
  */
-static inline char * nlex_bufdup(NlexHandle * nh, size_t offset)
+static inline char *
+	nlex_bufdup(NlexHandle * nh, size_t offset)
 {
-	size_t len = nh->bufptr - nh->buf + 2 - offset;
+	NlexNString ns = nlex_bufdup_info(nh, offset);
 
-	char * newbuf = nlex_malloc(nh, len);
-	memcpy(newbuf, nh->buf + offset, len - 1);
-	newbuf[len - 1] = '\0';
+	char * newbuf = nlex_malloc(nh, ns.len + 1);
+	memcpy(newbuf, ns.buf, ns.len);
+	newbuf[ns.len] = '\0';
 	
 	return newbuf;
 }
-
 
 /**
  * @param free_tokbuf Usually false because you might have copied tokbuf without strcpy() or strdup()
