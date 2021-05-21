@@ -544,9 +544,7 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 				nan_tree_node_id(root->klnptr));
 		}
 				
-		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
-			"	if(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
-		fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
+		fprintf(fpout, "\tmatch = 1;\n");
 
 		/* Push itself onto the next-stack */
 		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));

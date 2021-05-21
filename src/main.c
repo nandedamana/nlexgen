@@ -90,6 +90,7 @@ int main(int argc, char * argv[])
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
 		"assert(ch_set);\n"
+		"_Bool match = 0;\n"
 		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
 #ifdef DEBUG
 		fprintf(fpout,
@@ -102,10 +103,12 @@ int main(int argc, char * argv[])
 	 * Thought it is more future-proof than printing `continue` there.
 	 */
 	fprintf(fpout, "L_after_istates:\n");
-	fprintf(fpout, "0;\n"); /* Because the C compiler complains
-	                         * "label at end of compound statement"
-	                         */
-	fprintf(fpout, "\n}\n"
+	fprintf(fpout, "if(match) {\n");
+		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n");
+			fprintf(fpout, "\tif(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
+			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
+	fprintf(fpout, "}\n");
+	fprintf(fpout, "}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
 		"}\n");
 #ifdef DEBUG
