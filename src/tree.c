@@ -400,6 +400,8 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 	// TODO make the branching better
 
 	NanTreeNode * tptr = NULL;
+	NanTreeNode * itptr = NULL;
+	NanTreeNode * jtptr = NULL;
 
 	if(root->visited)
 		return;
@@ -428,8 +430,53 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 
 	fprintf(fpout, ") {\n");
 
+	/* If Node A has a sibling that represents a list containing
+	 * the character dealt by Node A, use of `else` will cause a miss.
+	 * Some special siblings might not be actually overlapping,
+	 * but checking that is an overkill.
+	 */
+	bool can_use_else = true;
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch < 0) {
+			can_use_else = false;
+			break;
+		}
+	}
+	
+	/* Non-special siblings might share the same character in
+	 * some cases (see tests-auto/subx-001.nlx and
+	 * tests-auto/kleene-004.nlx).
+	 * TODO should that happen? remove the following if that
+	 * changes.
+	 */
+	if(can_use_else) {
+		for(itptr = root->first_child; itptr; itptr = itptr->sibling) {
+			for(jtptr = root->first_child; jtptr; jtptr = jtptr->sibling) {
+				if(itptr == jtptr)
+					continue;
+				
+				if(itptr->ch < 0)
+					continue;
+
+				if(itptr->ch == jtptr->ch) {
+					can_use_else = false;
+					break;
+				}
+			}
+		}
+	}
+
+	_Bool if_printed = 0;
+
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		_Bool printed = 0;
+
+		if(can_use_else) {
+			if(if_printed)
+				fprintf(fpout, "else ");
+			else
+				if_printed = 1;
+		}
 
 		fprintf(fpout, "if( ");
 
