@@ -4,6 +4,8 @@
  * File started on 2020-11-28, contains old code.
  */
 
+#include <assert.h>
+
 #include "tree.h"
 #include "error.h"
 
@@ -437,7 +439,7 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 	 */
 	bool can_use_else = true;
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		if(tptr->ch < 0) {
+		if(tptr->ch < 0 && tptr->ch != NLEX_CASE_ACT) {
 			can_use_else = false;
 			break;
 		}
@@ -466,9 +468,36 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 		}
 	}
 
-	_Bool if_printed = 0;
+	size_t actcount = 0;
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		if(tptr->ch == NLEX_CASE_ACT)
+			actcount++;
+	
+	// TODO why isn't this the case?
+	// id so, add a `break` in the following loop.
+	// assert(actcount <= 1);
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch == NLEX_CASE_ACT) {
+			/* TODO needed only when nlex_nstack_is_empty(nh)?
+			 * why did I write so in the early days?
+			 */
+		
+			fprintf(fpout,
+				"\tif(%d < hiprio_act_this_iter)\n"
+				"\t\thiprio_act_this_iter = %d;\n",
+				nan_tree_node_id(tptr),
+				nan_tree_node_id(tptr));
+		}
+	}
+
+	_Bool if_printed = 0;
+
+	/* Non-action nodes */
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch == NLEX_CASE_ACT)
+			continue;
+
 		_Bool printed = 0;
 
 		if(can_use_else) {
@@ -493,14 +522,6 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 				fprintf(fpout, ")");
 				printed = 1;
 			}
-			else if(tptr->ch == NLEX_CASE_ACT) {
-// TODO FIXME
-//				fprintf(fpout, "nlex_nstack_is_empty(nh");
-
-// TODO FIXME enabling again for semicolon in nguigen
-				fprintf(fpout, "1");
-				printed = 1;
-			}
 		}
 
 		if(!printed) {
@@ -509,39 +530,30 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 
 		fprintf(fpout, " ) {\n");
 
-		if(tptr->ch == NLEX_CASE_ACT) {
+		/* Usually Kleene star nodes push themselves into the next-stack.
+		 * But upon reaching a next-to-wildcard match, I've to remove the
+		 * Kleene state from the stack. This is to prevent 'cde' from
+		 * being consumed in 'axyzbcde' against the regex 'a*bcde'
+		 * TODO something wrong in this comment?
+		 */
+		if(root->klnptr) {
 			fprintf(fpout,
-				"\tif(%d < hiprio_act_this_iter)\n"
-				"\t\thiprio_act_this_iter = %d;\n",
-				nan_tree_node_id(tptr),
-				nan_tree_node_id(tptr));
+				/* checking again to skip grandparents */
+				"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
+				nan_tree_node_id(root->klnptr),
+				nan_tree_node_id(root->klnptr));
 		}
-		else { /* Non-action node */
-			/* Usually Kleene star nodes push themselves into the next-stack.
-			 * But upon reaching a next-to-wildcard match, I've to remove the
-			 * Kleene state from the stack. This is to prevent 'cde' from
-			 * being consumed in 'axyzbcde' against the regex 'a*bcde'
-			 * TODO something wrong in this comment?
-			 */
-			if(root->klnptr) {
-				fprintf(fpout,
-					/* checking again to skip grandparents */
-					"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
-					nan_tree_node_id(root->klnptr),
-					nan_tree_node_id(root->klnptr));
-			}
-					
-			fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
-				"	if(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
-			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
+				
+		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n"
+			"	if(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
+		fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 
-			/* Push itself onto the next-stack */
-			fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		/* Push itself onto the next-stack */
+		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
 
-			if(tptr->klnptr)
-				fprintf(fpout,
-					"\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr->klnptr));
-		}
+		if(tptr->klnptr)
+			fprintf(fpout,
+				"\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr->klnptr));
 
 		fprintf(fpout, "}\n");
 	}
