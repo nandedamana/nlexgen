@@ -17,6 +17,9 @@
 
 #define NLEX_DEFT_BUF_ALLOC_UNIT 4096
 
+// TODO make the latter number the maximum expected concurrent states
+#define NLEX_STATESTACK_ALLOC_UNIT 32
+
 /* Because EOF can be any value and writing down a constant here can
  * cause confusion with EOF.
  * -1 because EOF is already -ve and +N may make it some ASCII character.
@@ -217,11 +220,20 @@ static inline void nlex_nstack_fix_actions(NlexHandle * nh)
 	}
 }
 
+/* Call after setting nh->nstack_top but before the actual push */
+static inline void nlex_nstack_resize_if_needed(NlexHandle * nh)
+{
+	if(nh->nstack_top >= nh->nstack_allocsiz) {
+		nh->nstack_allocsiz += NLEX_STATESTACK_ALLOC_UNIT;
+		nh->nstack =
+			nlex_realloc(nh, nh->nstack, sizeof(NanTreeNodeId) * nh->nstack_allocsiz);
+	}
+}
+
 static inline void nlex_nstack_push(NlexHandle * nh, NanTreeNodeId id)
 {
 	nh->nstack_top++;
-	nh->nstack =
-		nlex_realloc(nh, nh->nstack, sizeof(NanTreeNodeId) * (nh->nstack_top + 1));
+	nlex_nstack_resize_if_needed(nh);
 	nh->nstack[nh->nstack_top] = id;
 }
 
@@ -241,8 +253,12 @@ void nlex_onerror(NlexHandle * nh, int errno);
 
 static inline void nlex_reset_states(NlexHandle * nh)
 {
+	nh->tstack_allocsiz = 0;
 	nh->tstack_top = 0;
+
+	nh->nstack_allocsiz = 0;
 	nh->nstack_top = 0;
+
 	nh->done       = 0; // TODO needed?
 	nh->last_accepted_state = 0;
 }
@@ -268,15 +284,19 @@ static inline void nlex_swap_t_n_stacks(NlexHandle * nh)
 {
 	NanTreeNodeId * ptmp;
 	size_t          stmp;
+	size_t          ttmp;
 
 	ptmp = nh->tstack;
-	stmp = nh->tstack_top;
+	stmp = nh->tstack_allocsiz;
+	ttmp = nh->tstack_top;
 	
 	nh->tstack     = nh->nstack;
+	nh->tstack_allocsiz = nh->nstack_allocsiz;
 	nh->tstack_top = nh->nstack_top;
 	
 	nh->nstack     = ptmp;
-	nh->nstack_top = stmp;
+	nh->nstack_top = ttmp;
+	nh->nstack_allocsiz = stmp;
 }
 
 static inline void nlex_tstack_dump(NlexHandle * nh)
@@ -307,18 +327,20 @@ static inline _Bool nlex_tstack_is_empty(NlexHandle * nh)
 	return (nh->tstack_top == 0);
 }
 
+/* Call after popping and setting nh->tstack_top */
+static inline void nlex_tstack_resize_if_needed(NlexHandle * nh)
+{
+	if( (nh->tstack_allocsiz - nh->tstack_top) > NLEX_STATESTACK_ALLOC_UNIT ) {
+		nh->tstack_allocsiz -= NLEX_STATESTACK_ALLOC_UNIT;
+		nh->tstack =
+			nlex_realloc(nh, nh->tstack, sizeof(NanTreeNodeId) * nh->tstack_allocsiz);
+	}
+}
+
 static inline size_t nlex_tstack_pop(NlexHandle * nh)
 {
 	size_t id = nh->tstack[nh->tstack_top--];
-
-	if(nh->tstack_top != 0) {
-		nh->tstack =
-			nlex_realloc(nh, nh->tstack, sizeof(size_t) * (nh->tstack_top + 1));
-	}
-	else {
-		free(nh->tstack);
-		nh->tstack = NULL;
-	}
+	nlex_tstack_resize_if_needed(nh);
 
 	return id;
 }

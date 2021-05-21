@@ -35,8 +35,10 @@ typedef struct NlexHandle {
 	unsigned int last_accepted_state;
 	unsigned int * tstack ;
 	size_t tstack_top;
+	size_t tstack_allocsiz;
 	unsigned int * nstack ;
 	size_t nstack_top;
+	size_t nstack_allocsiz;
 	_Bool done;
 	void * data;
 } NlexHandle;

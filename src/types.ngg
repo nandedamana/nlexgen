@@ -65,9 +65,11 @@ class NlexHandle
 //	var tstack         array of NanTreeNodeId;
 	var tstack array of uint; // TODO FIXME
 	var tstack_top     size; // 0 => empty, 1 is the bottom
+	var tstack_allocsiz size;
 //	var nstack         array of NanTreeNodeId;
 	var nstack array of uint; // TODO FIXME
 	var nstack_top     size;
+	var nstack_allocsiz size;
 
 	var done bool; // TODO rem?
 	
