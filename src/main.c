@@ -53,6 +53,7 @@ int main(int argc, char * argv[])
 // TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
 
 	fprintf(fpout,
+		"_Bool ch_set = 0;\n"
 		"nlex_reset_states(nh);\n"
 		"nlex_nstack_push(nh, %d);\n",
 		troot.id);
@@ -84,10 +85,11 @@ int main(int argc, char * argv[])
 		"nlex_swap_t_n_stacks(nh);\n"
 		// TODO FIXME
 //		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
-		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }\n"
+		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); ch_set = 1; }\n"
 		"_Bool on_consume_called = 0; // see ngg bug 20200831000\n"
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
+		"assert(ch_set);\n"
 		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
 #ifdef DEBUG
 		fprintf(fpout,

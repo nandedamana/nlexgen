@@ -17,7 +17,8 @@ mcfile="$1.main.c"
 elffile="$1.elf"
 tstfile="$1.test"
 
-echo '#include <read.h>' > "$ocfile"
+echo '#include <assert.h>' > "$ocfile"
+echo '#include <read.h>' >> "$ocfile"
 echo 'extern int ch;' >> "$ocfile"
 echo 'void get_token(NlexHandle * nh) {' >> "$ocfile"
 # TODO timeout?
