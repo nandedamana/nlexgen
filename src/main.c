@@ -51,6 +51,11 @@ int main(int argc, char * argv[])
 	#endif
 
 // TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
+// NOTE: Commits made on or just before 2021-05-22 do
+// something similar. Check. I think splitting the loop would
+// be a further improvement.
+
+	// TODO why do I have both hiprio_act_this_iter and nh->last_accepted_state? Find and doc. Or did I introduce nh->last_accepted_state just keep record of it? If so, it's useless now that I reset to 0 for performance reasons.
 
 	fprintf(fpout,
 		"_Bool ch_set = 0;\n"
@@ -114,10 +119,13 @@ int main(int argc, char * argv[])
 #ifdef DEBUG
 	fprintf(fpout,
 		"\tfprintf(stderr, "
-		"\t\t\"enterng anode comparison with nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
+		"\t\t\"before anode comparison, nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
 #endif
 	nan_tree_unvisit(&troot);
+
+	fprintf(fpout, "if(nh->last_accepted_state != 0) {\n");
 	nan_tree_astates_to_code(&troot, 0);
+	fprintf(fpout, "}\n");
 
 	/* END Code Generation */
 

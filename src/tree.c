@@ -28,7 +28,7 @@ bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 			if_printed = 1;
 
 		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
-			"nh->bufptr = nh->buf + nh->lastmatchat;\n%s\n}\n",
+			"nh->bufptr = nh->buf + nh->lastmatchat; nh->last_accepted_state = 0;\n%s\n}\n",
 			nan_tree_node_id(root),
 			nan_treenode_get_actstr(root));
 
