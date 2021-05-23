@@ -528,7 +528,7 @@ nextiter:
  * This was to make the longest rule preferable (on collision), IIRC.
  * TODO do more research.
  */
-void nan_tree_istates_to_code(NanTreeNode * root)
+void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 {
 	// TODO make the branching better
 
@@ -537,12 +537,8 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 	else
 		root->visited = true;
 
-	bool if_printed = false;
-
 	if(if_printed)
 		fprintf(fpout, "else ");
-	else
-		if_printed = true;
 
 	fprintf(fpout, "if(nh->curstate == %u) {", nan_tree_node_id(root));
 
@@ -557,7 +553,7 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 
 	NanTreeNode * tptr = NULL;
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_istates_to_code(tptr);
+		nan_tree_istates_to_code(tptr, true);
 
 	return;
 }

@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
 		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
 #endif
 	nan_tree_unvisit(&troot);
-	nan_tree_istates_to_code(&troot);
+	nan_tree_istates_to_code(&troot, false);
 
 	fprintf(fpout, "if(match) {\n");
 		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n");
