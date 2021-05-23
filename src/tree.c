@@ -190,16 +190,16 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanTreeNode * subexptailbak_for_kln = NULL;
 
 	NlexCharacter ch;
-	NlexCharacter prvch;
+	NlexCharacter prvch = 0;
 	_Bool         escaped = 0;
 	_Bool         in_list = 0; /* [] */
-	_Bool         list_inverted;
+	_Bool         list_inverted = 0;
 	_Bool         start_subx = 0;
 	_Bool         join_or = 0;
 
 	bool          force_newnode_for_next_char = false;
 
-	NanCharacterList * chlist;
+	NanCharacterList * chlist = NULL;
 
 	nan_treenode_init(root);
 	root->ch          = NLEX_CASE_ROOT;
