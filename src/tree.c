@@ -70,8 +70,8 @@ void nan_inode_to_code(NanTreeNode * node)
 			 */
 		
 			fprintf(fpout,
-				"\tif(%d < hiprio_act_this_iter)\n"
-				"\t\thiprio_act_this_iter = %d;\n",
+				"\tif(%u < hiprio_act_this_iter)\n"
+				"\t\thiprio_act_this_iter = %u;\n",
 				nan_tree_node_id(tptr),
 				nan_tree_node_id(tptr));
 		}
@@ -125,7 +125,7 @@ void nan_inode_to_code(NanTreeNode * node)
 		if(node->klnptr) {
 			fprintf(fpout,
 				/* checking again to skip grandparents */
-				"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
+				"\nif(nh->curstate == %u) nlex_nstack_remove(nh, %u);\n",
 				nan_tree_node_id(node->klnptr),
 				nan_tree_node_id(node->klnptr));
 		}
@@ -133,18 +133,14 @@ void nan_inode_to_code(NanTreeNode * node)
 		fprintf(fpout, "\tmatch = 1;\n");
 
 		/* Push itself onto the next-stack */
-		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+		fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
 
 		if(tptr->klnptr)
 			fprintf(fpout,
-				"\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr->klnptr));
+				"\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr->klnptr));
 
 		fprintf(fpout, "}\n");
 	}
-
-	/* WHY-NOT-ELSE-SOLN: see WHY-NOT-ELSE above */
-	if( !(node->klnptr) && !(node->is_pointed_by_kleene) )
-		fprintf(fpout, "goto L_after_istates;\n");
 }
 
 bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
@@ -162,7 +158,7 @@ bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 		else
 			if_printed = 1;
 
-		fprintf(fpout, "if(nh->last_accepted_state == %d) {\n"
+		fprintf(fpout, "if(nh->last_accepted_state == %u) {\n"
 			"nh->bufptr = nh->buf + nh->lastmatchat; nh->last_accepted_state = 0;\n%s\n}\n",
 			nan_tree_node_id(root),
 			nan_treenode_get_actstr(root));
@@ -541,29 +537,21 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 	else
 		root->visited = true;
 
-	/* WHY-NOT-ELSE
-	 * Can't print `else` like this because it'll cause some
-	 * valid branches to be missed sometimes when there is `||`.
-	 * See tests-auto/kleene-001.nlx
-	 * One branch is `} else if (nh->curstate == 4) {`
-	 * while another is `} else if (nh->curstate == 6 || nh->curstate == 4) {`.
-	 * Solution: see WHY-NOT-ELSE-SOLN below
-	// `if_printed` taken as arg to this fun
+	bool if_printed = false;
+
 	if(if_printed)
 		fprintf(fpout, "else ");
 	else
-		if_printed = 1;
-	 */
+		if_printed = true;
 
-	fprintf(fpout, "if(nh->curstate == %d", nan_tree_node_id(root));
-
-	/* Bypass */
-	if(root->klnptr)
-		fprintf(fpout, " || nh->curstate == %d", nan_tree_node_id(root->klnptr));
-
-	fprintf(fpout, ") {\n");
+	fprintf(fpout, "if(nh->curstate == %u) {", nan_tree_node_id(root));
 
 	nan_inode_to_code(root);
+
+	size_t i;
+	for(i = 0; i < root->klnptr_from_len; i++)
+		if(root->klnptr_from)
+			nan_inode_to_code(root->klnptr_from[i]);
 
 	fprintf(fpout, "}\n");
 

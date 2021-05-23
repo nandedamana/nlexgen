@@ -48,8 +48,8 @@ typedef struct _NanTreeNode {
 	 */
 	struct _NanTreeNode * klnptr;
 
-	/* Whether some other node's klnptr points to this node */
-	bool is_pointed_by_kleene;
+	struct _NanTreeNode ** klnptr_from;
+	size_t                 klnptr_from_len;
 
 	struct _NanTreeNode * first_child;
 	struct _NanTreeNode * sibling;
@@ -68,11 +68,13 @@ void nan_inode_to_code(NanTreeNode * node);
 
 static inline void nan_tree_unvisit(NanTreeNode * root)
 {
-	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling)
-		if(root->visited)
-			nan_tree_unvisit(tptr);
+	if(root->visited == false)
+		return;
 
 	root->visited = false;
+
+	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_unvisit(tptr);
 }
 
 static inline void nan_treenode_init(NanTreeNode * root)
@@ -81,8 +83,10 @@ static inline void nan_treenode_init(NanTreeNode * root)
 	root->sibling     = NULL;
 	root->ptr         = NULL;
 	root->klnptr      = NULL;
-	root->is_pointed_by_kleene = false;
+	root->klnptr_from = NULL;
+	root->klnptr_from_len = 0;
 	root->id          = 0;
+	root->visited     = false;
 }
 
 static inline void
@@ -90,8 +94,14 @@ static inline void
 {
 	node->klnptr = klnptr;
 
-	if(klnptr)
-		klnptr->is_pointed_by_kleene = true;
+	if(klnptr) {
+		klnptr->klnptr_from_len++;
+		// TODO Use nlex_realloc()
+		klnptr->klnptr_from = realloc(klnptr->klnptr_from, sizeof(klnptr->klnptr_from[0]) * klnptr->klnptr_from_len);
+		assert(klnptr->klnptr_from);
+
+		klnptr->klnptr_from[klnptr->klnptr_from_len - 1] = node;
+	}
 }
 
 static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
@@ -323,16 +333,34 @@ static inline _Bool
 
 static inline void nan_tree_assign_node_ids_rec(NanTreeNode * node)
 {
+	if(node->visited) {
+		assert(0 != nan_tree_node_id(node));
+		return;
+	}
+	else {
+		node->visited = true;
+	}
+
+	assert(0 != nan_tree_node_id(node));
+
+	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling) {
+		assert(chld != chld->sibling);
+		nan_tree_assign_node_ids_rec(chld);
+	}
+}
+
+static inline void nan_assert_all_nodes_have_id(NanTreeNode * node)
+{
 	if(node->visited)
 		return;
 	else
 		node->visited = true;
 
-	nan_tree_node_id(node);
+	assert(node->id != 0);
 
 	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling) {
 		assert(chld != chld->sibling);
-		nan_tree_assign_node_ids_rec(chld);
+		nan_assert_all_nodes_have_id(chld);
 	}
 }
 

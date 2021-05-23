@@ -35,8 +35,13 @@ int main(int argc, char * argv[])
 	const char * err = nan_tree_build(&troot, nh);
 	if(err != NLEXERR_SUCCESS)
 		nlex_die(err);
-
+	 
+	nan_tree_unvisit(&troot);
+	// TODO FIXME currently both this fun and other funs use nan_tree_node_id(), which sets the id if not set already. split it as getter and setter. Only this fun should use the setter.
 	nan_tree_assign_node_ids(&troot);
+	
+	nan_tree_unvisit(&troot);
+	nan_assert_all_nodes_have_id(&troot);
 
 	fpout = stdout;
 
@@ -46,6 +51,7 @@ int main(int argc, char * argv[])
 	//#define DEBUG 1
 	
 	#ifdef DEBUG
+		nan_tree_unvisit(&troot);
 		nan_plot(&troot);
 		fprintf(stderr, "tree dump complete.\n");
 	#endif
@@ -104,10 +110,7 @@ int main(int argc, char * argv[])
 #endif
 	nan_tree_unvisit(&troot);
 	nan_tree_istates_to_code(&troot);
-	/* `goto L_after_istates;` is printed by nan_tree_istates_to_code().
-	 * Thought it is more future-proof than printing `continue` there.
-	 */
-	fprintf(fpout, "L_after_istates:\n");
+
 	fprintf(fpout, "if(match) {\n");
 		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n");
 			fprintf(fpout, "\tif(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");

@@ -37,21 +37,21 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 	else
 		node->visited = true;
 
-	fprintf(fp, "%d", node->id);
+	fprintf(fp, "%u", nan_tree_node_id(node));
 
 	if(isprint(node->ch)) {
 		if(node->ch == '"') {
-			fprintf(fp, "[label=\"%d: '\\\"'\"]", node->id);
+			fprintf(fp, "[label=\"%u: '\\\"'\"]", nan_tree_node_id(node));
 		}
 		else if(node->ch == '\\') {
-			fprintf(fp, "[label=\"%d: '\\\\'\"]", node->id);
+			fprintf(fp, "[label=\"%u: '\\\\'\"]", nan_tree_node_id(node));
 		}
 		else {
-			fprintf(fp, "[label=\"%d: '%c'\"]", node->id, node->ch);
+			fprintf(fp, "[label=\"%u: '%c'\"]", nan_tree_node_id(node), node->ch);
 		}
 	}
 	else {
-		fprintf(fp, "[label=\"%d: %d", node->id, node->ch);
+		fprintf(fp, "[label=\"%u: %d", nan_tree_node_id(node), node->ch);
 		
 		for(size_t i = 0; mrkrs_s[i]; i++)
 			if(-(node->ch) & mrkrs[i])
@@ -70,11 +70,11 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 
 	for(NanTreeNode * chld = node->first_child; chld; chld = chld->sibling) {
 		nan_plot_rec(chld, fp);
-		fprintf(fp, "%d -> %d;\n", node->id, chld->id);
+		fprintf(fp, "%u -> %u;\n", nan_tree_node_id(node), nan_tree_node_id(chld));
 	}
 	
 	if(node->klnptr)
-		fprintf(fp, "%d -> %d [label=\"*\"];\n", node->id, node->klnptr->id);
+		fprintf(fp, "%u -> %u [label=\"*\"];\n", nan_tree_node_id(node), nan_tree_node_id(node->klnptr));
 }
 
 #endif
