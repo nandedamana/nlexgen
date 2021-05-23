@@ -12,6 +12,141 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
+void nan_inode_to_code(NanTreeNode * node)
+{
+	NanTreeNode * tptr = NULL;
+	NanTreeNode * itptr = NULL;
+	NanTreeNode * jtptr = NULL;
+
+	/* If Node A has a sibling that represents a list containing
+	 * the character dealt by Node A, use of `else` will cause a miss.
+	 * Some special siblings might not be actually overlapping,
+	 * but checking that is an overkill.
+	 */
+	bool can_use_else = true;
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch < 0 && tptr->ch != NLEX_CASE_ACT) {
+			can_use_else = false;
+			break;
+		}
+	}
+	
+	/* Non-special siblings might share the same character in
+	 * some cases (see tests-auto/subx-001.nlx and
+	 * tests-auto/kleene-004.nlx).
+	 * TODO should that happen? remove the following if that
+	 * changes.
+	 */
+	if(can_use_else) {
+		for(itptr = node->first_child; itptr; itptr = itptr->sibling) {
+			for(jtptr = node->first_child; jtptr; jtptr = jtptr->sibling) {
+				if(itptr == jtptr)
+					continue;
+				
+				if(itptr->ch < 0)
+					continue;
+
+				if(itptr->ch == jtptr->ch) {
+					can_use_else = false;
+					break;
+				}
+			}
+		}
+	}
+
+	size_t actcount = 0;
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling)
+		if(tptr->ch == NLEX_CASE_ACT)
+			actcount++;
+	
+	// TODO why isn't this the case?
+	// id so, add a `break` in the following loop.
+	// assert(actcount <= 1);
+
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch == NLEX_CASE_ACT) {
+			/* TODO needed only when nlex_nstack_is_empty(nh)?
+			 * why did I write so in the early days?
+			 */
+		
+			fprintf(fpout,
+				"\tif(%d < hiprio_act_this_iter)\n"
+				"\t\thiprio_act_this_iter = %d;\n",
+				nan_tree_node_id(tptr),
+				nan_tree_node_id(tptr));
+		}
+	}
+
+	_Bool if_printed = 0;
+
+	/* Non-action nodes */
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch == NLEX_CASE_ACT)
+			continue;
+
+		_Bool printed = 0;
+
+		if(can_use_else) {
+			if(if_printed)
+				fprintf(fpout, "else ");
+			else
+				if_printed = 1;
+		}
+
+		fprintf(fpout, "if( ");
+
+		if(tptr->ch < 0) { /* Special cases */
+			if(-(tptr->ch) & NLEX_CASE_LIST) {
+				if(-(tptr->ch) & NLEX_CASE_INVERT)
+					fprintf(fpout, "!(");
+				else
+					fprintf(fpout, "(");
+				
+				nan_character_list_to_expr(
+					nan_treenode_get_charlist(tptr), "ch", fpout);
+
+				fprintf(fpout, ")");
+				printed = 1;
+			}
+		}
+
+		if(!printed) {
+			nan_character_print_c_comp(tptr->ch, "ch", fpout);
+		}
+
+		fprintf(fpout, " ) {\n");
+
+		/* Usually Kleene star nodes push themselves into the next-stack.
+		 * But upon reaching a next-to-wildcard match, I've to remove the
+		 * Kleene state from the stack. This is to prevent 'cde' from
+		 * being consumed in 'axyzbcde' against the regex 'a*bcde'
+		 * TODO something wrong in this comment?
+		 */
+		if(node->klnptr) {
+			fprintf(fpout,
+				/* checking again to skip grandparents */
+				"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
+				nan_tree_node_id(node->klnptr),
+				nan_tree_node_id(node->klnptr));
+		}
+				
+		fprintf(fpout, "\tmatch = 1;\n");
+
+		/* Push itself onto the next-stack */
+		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
+
+		if(tptr->klnptr)
+			fprintf(fpout,
+				"\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr->klnptr));
+
+		fprintf(fpout, "}\n");
+	}
+
+	/* WHY-NOT-ELSE-SOLN: see WHY-NOT-ELSE above */
+	if( !(node->klnptr) && !(node->is_pointed_by_kleene) )
+		fprintf(fpout, "goto L_after_istates;\n");
+}
+
 bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
@@ -401,10 +536,6 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 {
 	// TODO make the branching better
 
-	NanTreeNode * tptr = NULL;
-	NanTreeNode * itptr = NULL;
-	NanTreeNode * jtptr = NULL;
-
 	if(root->visited)
 		return;
 	else
@@ -432,136 +563,11 @@ void nan_tree_istates_to_code(NanTreeNode * root)
 
 	fprintf(fpout, ") {\n");
 
-	/* If Node A has a sibling that represents a list containing
-	 * the character dealt by Node A, use of `else` will cause a miss.
-	 * Some special siblings might not be actually overlapping,
-	 * but checking that is an overkill.
-	 */
-	bool can_use_else = true;
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		if(tptr->ch < 0 && tptr->ch != NLEX_CASE_ACT) {
-			can_use_else = false;
-			break;
-		}
-	}
-	
-	/* Non-special siblings might share the same character in
-	 * some cases (see tests-auto/subx-001.nlx and
-	 * tests-auto/kleene-004.nlx).
-	 * TODO should that happen? remove the following if that
-	 * changes.
-	 */
-	if(can_use_else) {
-		for(itptr = root->first_child; itptr; itptr = itptr->sibling) {
-			for(jtptr = root->first_child; jtptr; jtptr = jtptr->sibling) {
-				if(itptr == jtptr)
-					continue;
-				
-				if(itptr->ch < 0)
-					continue;
-
-				if(itptr->ch == jtptr->ch) {
-					can_use_else = false;
-					break;
-				}
-			}
-		}
-	}
-
-	size_t actcount = 0;
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		if(tptr->ch == NLEX_CASE_ACT)
-			actcount++;
-	
-	// TODO why isn't this the case?
-	// id so, add a `break` in the following loop.
-	// assert(actcount <= 1);
-
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		if(tptr->ch == NLEX_CASE_ACT) {
-			/* TODO needed only when nlex_nstack_is_empty(nh)?
-			 * why did I write so in the early days?
-			 */
-		
-			fprintf(fpout,
-				"\tif(%d < hiprio_act_this_iter)\n"
-				"\t\thiprio_act_this_iter = %d;\n",
-				nan_tree_node_id(tptr),
-				nan_tree_node_id(tptr));
-		}
-	}
-
-	_Bool if_printed = 0;
-
-	/* Non-action nodes */
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		if(tptr->ch == NLEX_CASE_ACT)
-			continue;
-
-		_Bool printed = 0;
-
-		if(can_use_else) {
-			if(if_printed)
-				fprintf(fpout, "else ");
-			else
-				if_printed = 1;
-		}
-
-		fprintf(fpout, "if( ");
-
-		if(tptr->ch < 0) { /* Special cases */
-			if(-(tptr->ch) & NLEX_CASE_LIST) {
-				if(-(tptr->ch) & NLEX_CASE_INVERT)
-					fprintf(fpout, "!(");
-				else
-					fprintf(fpout, "(");
-				
-				nan_character_list_to_expr(
-					nan_treenode_get_charlist(tptr), "ch", fpout);
-
-				fprintf(fpout, ")");
-				printed = 1;
-			}
-		}
-
-		if(!printed) {
-			nan_character_print_c_comp(tptr->ch, "ch", fpout);
-		}
-
-		fprintf(fpout, " ) {\n");
-
-		/* Usually Kleene star nodes push themselves into the next-stack.
-		 * But upon reaching a next-to-wildcard match, I've to remove the
-		 * Kleene state from the stack. This is to prevent 'cde' from
-		 * being consumed in 'axyzbcde' against the regex 'a*bcde'
-		 * TODO something wrong in this comment?
-		 */
-		if(root->klnptr) {
-			fprintf(fpout,
-				/* checking again to skip grandparents */
-				"\nif(nh->curstate == %d) nlex_nstack_remove(nh, %d);\n",
-				nan_tree_node_id(root->klnptr),
-				nan_tree_node_id(root->klnptr));
-		}
-				
-		fprintf(fpout, "\tmatch = 1;\n");
-
-		/* Push itself onto the next-stack */
-		fprintf(fpout, "\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr));
-
-		if(tptr->klnptr)
-			fprintf(fpout,
-				"\tnlex_nstack_push(nh, %d);\n", nan_tree_node_id(tptr->klnptr));
-
-		fprintf(fpout, "}\n");
-	}
-
-	/* WHY-NOT-ELSE-SOLN: see WHY-NOT-ELSE above */
-	if( !(root->klnptr) && !(root->is_pointed_by_kleene) )
-		fprintf(fpout, "goto L_after_istates;\n");
+	nan_inode_to_code(root);
 
 	fprintf(fpout, "}\n");
 
+	NanTreeNode * tptr = NULL;
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
 		nan_tree_istates_to_code(tptr);
 

@@ -64,6 +64,8 @@ typedef struct _NanCharacterList {
 	size_t          count;
 } NanCharacterList;
 
+void nan_inode_to_code(NanTreeNode * node);
+
 static inline void nan_tree_unvisit(NanTreeNode * root)
 {
 	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling)
