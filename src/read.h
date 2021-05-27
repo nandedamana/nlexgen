@@ -138,6 +138,9 @@ static inline void nlex_destroy(NlexHandle * nh)
 	if(nh->fp)
 		free(nh->buf);
 
+	free(nh->tstack);
+	free(nh->nstack);
+
 	free(nh);
 }
 
