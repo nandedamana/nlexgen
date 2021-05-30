@@ -143,6 +143,24 @@ void nan_inode_to_code(NanTreeNode * node)
 	}
 }
 
+inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * chld)
+{
+	if(!node->first_child) {
+		node->first_child = chld;
+	}
+	else {
+		NanTreeNode * tptr = node->first_child;
+		while(tptr) {
+			if(! tptr->sibling) {
+				tptr->sibling = chld;
+				break;
+			}
+		
+			tptr = tptr->sibling;
+		}
+	}
+}
+
 bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
@@ -221,9 +239,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			
 			anode->first_child = NULL;
 			
-			/* Now prepend */
-			anode->sibling        = tcurnode->first_child;
-			tcurnode->first_child = anode;
+			nan_tree_node_append_child(tcurnode, anode);
 			/* END Attach the action node to the tree */			
 
 			/* Reset the tree pointer */
@@ -407,23 +423,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				nan_tree_node_convert_to_kleene(newnode, tcurnode);
 				
 				/* Append */
+				nan_tree_node_append_child(tcurnode, newnode);
 			
-				// TODO abstract fun?
-				if(!tcurnode->first_child) {
-					tcurnode->first_child = newnode;
-				}
-				else {
-					NanTreeNode * tptr = tcurnode->first_child;
-					while(tptr) {
-						if(! tptr->sibling) {
-							tptr->sibling = newnode;
-							break;
-						}
-					
-						tptr = tptr->sibling;
-					}
-				}
-				
 				tcurnode = newnode;
 				
 				/* Skip the rest since no new node is to be added. */
