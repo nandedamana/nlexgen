@@ -406,9 +406,23 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 				nan_tree_node_convert_to_kleene(newnode, tcurnode);
 				
-				/* Prepend */
-				newnode->sibling      = tcurnode->first_child;
-				tcurnode->first_child = newnode;
+				/* Append */
+			
+				// TODO abstract fun?
+				if(!tcurnode->first_child) {
+					tcurnode->first_child = newnode;
+				}
+				else {
+					NanTreeNode * tptr = tcurnode->first_child;
+					while(tptr) {
+						if(! tptr->sibling) {
+							tptr->sibling = newnode;
+							break;
+						}
+					
+						tptr = tptr->sibling;
+					}
+				}
 				
 				tcurnode = newnode;
 				
