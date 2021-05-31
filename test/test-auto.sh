@@ -35,4 +35,6 @@ while IFS= read -r line; do
 
 	echo "INPUT $inp"
 	test "$(echo -n "$inp"|timeout 4s "$elffile")" = "$exp"
+	echo "$exp"
+	echo ''
 done < "$tstfile"
