@@ -12,11 +12,48 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
-void nan_inode_to_code(NanTreeNode * node)
+// TODO move
+void nan_inode_to_code_kleene_skipping(NanTreeNode * node)
+{
+	NanTreeNode * tptr = NULL;
+
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+		// TODO FIXME this makes tests-auto/subx-001.nlx pass, but fail some including str-dq.nlx
+
+		if(tptr->ch == NLEX_CASE_PASSTHRU) {
+			nan_inode_to_code_kleene_skipping(tptr);
+		}
+
+		if(tptr->klnptr_from) {
+			for(size_t i = 0; i < tptr->klnptr_from_len; i++) {
+				assert(tptr->klnptr_from[i]);
+				nan_inode_to_code(tptr->klnptr_from[i], true);
+			}
+		}
+	}
+}
+
+void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 {
 	NanTreeNode * tptr = NULL;
 	NanTreeNode * itptr = NULL;
 	NanTreeNode * jtptr = NULL;
+
+	if(pseudonode) {
+		if(node->klnptr)
+			nan_inode_to_code_matchbranch(node->klnptr);
+	}
+	else {
+		/* Enables entering back the kleene loop */
+		if(node->klnptr)
+			nan_inode_to_code(node, true);
+
+		/* Children will be handled by the call for the pseudonode */
+		if(node->klnptr)
+			return;
+	}
+
+	nan_inode_to_code_kleene_skipping(node);
 
 	/* If Node A has a sibling that represents a list containing
 	 * the character dealt by Node A, use of `else` will cause a miss.
@@ -59,9 +96,7 @@ void nan_inode_to_code(NanTreeNode * node)
 		if(tptr->ch == NLEX_CASE_ACT)
 			actcount++;
 	
-	// TODO why isn't this the case?
-	// id so, add a `break` in the following loop.
-	// assert(actcount <= 1);
+	assert(actcount <= 1);
 
 	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
 		if(tptr->ch == NLEX_CASE_ACT) {
@@ -70,10 +105,20 @@ void nan_inode_to_code(NanTreeNode * node)
 			 */
 		
 			fprintf(fpout,
-				"\tif(%u < hiprio_act_this_iter)\n"
+				"\tif(%u < hiprio_act_this_iter) {\n"
 				"\t\thiprio_act_this_iter = %u;\n",
 				nan_tree_node_id(tptr),
 				nan_tree_node_id(tptr));
+
+			#ifdef DEBUG
+			fprintf(fpout,
+				"\tfprintf(stderr, \"set hiprio_act_this_iter = %u;\\n\");\n",
+				nan_tree_node_id(tptr));
+			#endif
+			
+			fprintf(fpout, "\t}\n");
+			
+			break;
 		}
 	}
 
@@ -83,8 +128,9 @@ void nan_inode_to_code(NanTreeNode * node)
 	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
 		if(tptr->ch == NLEX_CASE_ACT)
 			continue;
-
-		_Bool printed = 0;
+			
+		if(nan_treenode_is_klndst(tptr))
+			continue;
 
 		if(can_use_else) {
 			if(if_printed)
@@ -93,57 +139,54 @@ void nan_inode_to_code(NanTreeNode * node)
 				if_printed = 1;
 		}
 
-		fprintf(fpout, "if( ");
-
-		if(tptr->ch < 0) { /* Special cases */
-			if(-(tptr->ch) & NLEX_CASE_LIST) {
-				if(-(tptr->ch) & NLEX_CASE_INVERT)
-					fprintf(fpout, "!(");
-				else
-					fprintf(fpout, "(");
-				
-				nan_character_list_to_expr(
-					nan_treenode_get_charlist(tptr), "ch", fpout);
-
-				fprintf(fpout, ")");
-				printed = 1;
-			}
-		}
-
-		if(!printed) {
-			nan_character_print_c_comp(tptr->ch, "ch", fpout);
-		}
-
-		fprintf(fpout, " ) {\n");
-
-		/* Usually Kleene star nodes push themselves into the next-stack.
-		 * But upon reaching a next-to-wildcard match, I've to remove the
-		 * Kleene state from the stack. This is to prevent 'cde' from
-		 * being consumed in 'axyzbcde' against the regex 'a*bcde'
-		 * TODO something wrong in this comment?
-		 */
-		if(node->klnptr) {
-			fprintf(fpout,
-				/* checking again to skip grandparents */
-				"\nif(nh->curstate == %u) nlex_nstack_remove(nh, %u);\n",
-				nan_tree_node_id(node->klnptr),
-				nan_tree_node_id(node->klnptr));
-		}
-				
-		fprintf(fpout, "\tmatch = 1;\n");
-
-		/* Push itself onto the next-stack */
-		fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
-
-		if(tptr->klnptr)
-			fprintf(fpout,
-				"\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr->klnptr));
-
-		fprintf(fpout, "}\n");
+		nan_inode_to_code_matchbranch(tptr);
 	}
 }
 
-inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * chld)
+void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
+{
+	if(tptr->ch == NLEX_CASE_PASSTHRU) {
+		NanTreeNode * chld = NULL;
+		for(chld = tptr->first_child; chld; chld = chld->sibling)
+			nan_inode_to_code_matchbranch(chld);
+	
+		return;
+	}
+
+	_Bool printed = 0;
+
+	fprintf(fpout, "if( ");
+
+	if(tptr->ch < 0) { /* Special cases */
+		if(-(tptr->ch) & NLEX_CASE_LIST) {
+			if(-(tptr->ch) & NLEX_CASE_INVERT)
+				fprintf(fpout, "!(");
+			else
+				fprintf(fpout, "(");
+			
+			nan_character_list_to_expr(
+				nan_treenode_get_charlist(tptr), "ch", fpout);
+
+			fprintf(fpout, ")");
+			printed = 1;
+		}
+	}
+
+	if(!printed) {
+		nan_character_print_c_comp(tptr->ch, "ch", fpout);
+	}
+
+	fprintf(fpout, " ) {\n");
+
+	fprintf(fpout, "\tmatch = 1;\n");
+
+	/* Push itself onto the next-stack */
+	fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
+
+	fprintf(fpout, "}\n");
+}
+
+static inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * chld)
 {
 	if(!node->first_child) {
 		node->first_child = chld;
@@ -200,6 +243,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanTreeNode * tcurnode_parent = NULL;
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
+
 	NanTreeNode * subexptailbak = NULL;
 	NanTreeNode * subexptailbak_for_kln = NULL;
 
@@ -208,7 +252,6 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	_Bool         escaped = 0;
 	_Bool         in_list = 0; /* [] */
 	_Bool         list_inverted = 0;
-	_Bool         start_subx = 0;
 	_Bool         join_or = 0;
 
 	bool          force_newnode_for_next_char = false;
@@ -262,6 +305,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				return NLEXERR_UNKNOWN_ESCSEQ;
 		}
 		else {
+			if(ch != '*' && ch != '+')
+				klndest = NULL;
+		
 			if(ch == '\\') {
 				escaped = 1;
 				goto nextiter;
@@ -277,7 +323,12 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				goto nextiter;
 			}
 			else if(ch == '(') {
-				start_subx = 1;
+				NanTreeNode * startnode = nan_treenode_new(nh, NLEX_CASE_PASSTHRU);
+				nan_tree_node_append_child(tcurnode, startnode);
+				tcurnode = startnode;
+
+				lastsubxparent = startnode; // TODO push to a stack to support nested sub-expressions
+
 				// TODO push to the subx stack
 				goto nextiter;
 			}
@@ -356,7 +407,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				 * this means I can directly use it.
 				 * Otherwise, I have to create a sibling.
 				 */
-				
+
 				if(tcurnode->first_child == NULL) {
 					/* Simply convert it to a Kleene */
 					nan_tree_node_convert_to_kleene(tcurnode, klndest);
@@ -373,9 +424,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 					
 					for(tptr = tcurnode_parent->first_child; tptr; tptr = tptr->sibling) {
 						if(tptr == tcurnode)
-							goto nextiter;
+							continue;
 						
-						if( nan_tree_nodes_match(tptr, tcurnode) && tptr->klnptr )
+						if( nan_tree_nodes_match(tptr, tcurnode) && 0 != tptr->klnptr_from_len )
 						{
 							match = tptr;
 							break;
@@ -407,6 +458,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				goto nextiter;
 			}
 			else if(ch == '+') { /* Kleene plus */
+				// TODO FIXME this will node work for subexpressions
+			
 				if(tcurnode == root)
 					return NLEXERR_KLEENE_PLUS_NOTHING;
 				
@@ -420,11 +473,10 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				memcpy(newnode, tcurnode, sizeof(NanTreeNode));
 				newnode->first_child  = NULL;
 
-				nan_tree_node_convert_to_kleene(newnode, tcurnode);
+				nan_tree_node_convert_to_kleene(newnode, newnode);
 				
 				/* Append */
 				nan_tree_node_append_child(tcurnode, newnode);
-			
 				tcurnode = newnode;
 				
 				/* Skip the rest since no new node is to be added. */
@@ -439,23 +491,10 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 		NanTreeNode * tmatching_node = NULL;
 
-		/* Keeping a pointer one step behind will help me create a new node */
-		NanTreeNode * tptr_prv = NULL;
-	
-		/* Sub-expressions need to be separate even if they share the same prefix */
-		if(start_subx) {
-			tptr_prv = tcurnode->first_child;
-			lastsubxparent = tcurnode; // TODO push to a stack to support nested sub-expressions
-			start_subx = 0;
-		}
-		else if(force_newnode_for_next_char) {
+		// TODO FIXME workaround because on-the-go tree simplification results in buggy tree (for instance, I don't know in advance if the character or subexpr I've just created node(s) for is getting followed by a kleene notation). either find a solution or make this permanent, remove the code to handle the false case, and add a separate tree simplification phase.
+//		if(force_newnode_for_next_char) {
+		if(true) {
 			force_newnode_for_next_char = false;
-
-			NanTreeNode * tptr;
-			
-			/* Code below depends on tptr_prv being the last child */
-			for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling)
-				tptr_prv = tptr;
 		}
 		else {
 			NanTreeNode * tptr;
@@ -471,9 +510,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 			/* Check if any child of the current node represents the new character */
 			for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling) {
-				tptr_prv = tptr;
-
-				if( nan_tree_nodes_match(tptr, tmpnode) && NULL == tptr->klnptr ) {
+				if( nan_tree_nodes_match(tptr, tmpnode) && 0 == tptr->klnptr_from_len ) {
 					tmatching_node = tptr;
 					break;
 				}
@@ -481,8 +518,6 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 			free(tmpnode);
 		}
-
-		klndest = tcurnode;
 
 		if(tmatching_node) {
 			tcurnode_parent = tcurnode;
@@ -495,14 +530,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			 * ch will not be NLEX_CASE_LIST in that case.
 			 */
 			newnode->ptr         = chlist;
-			
-			newnode->sibling     = NULL;
-			newnode->first_child = NULL;
 
-			if(tptr_prv == NULL) /* Case: tcurnode has no children yet */
-				tcurnode->first_child = newnode;
-			else
-				tptr_prv->sibling = newnode;
+			nan_tree_node_append_child(tcurnode, newnode);
 
 			/* For the next character, this node will be the parent */
 			tcurnode = newnode;
@@ -545,6 +574,8 @@ nextiter:
  */
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 {
+	NanTreeNode * tptr = NULL;
+
 	// TODO make the branching better
 
 	if(root->visited)
@@ -557,16 +588,10 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 
 	fprintf(fpout, "if(nh->curstate == %u) {", nan_tree_node_id(root));
 
-	nan_inode_to_code(root);
-
-	size_t i;
-	for(i = 0; i < root->klnptr_from_len; i++)
-		if(root->klnptr_from)
-			nan_inode_to_code(root->klnptr_from[i]);
+	nan_inode_to_code(root, false);
 
 	fprintf(fpout, "}\n");
 
-	NanTreeNode * tptr = NULL;
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
 		nan_tree_istates_to_code(tptr, true);
 

@@ -16,9 +16,10 @@
 #define NLEX_CASE_NONE    -1
 #define NLEX_CASE_ROOT    -2
 #define NLEX_CASE_ACT     -4
+#define NLEX_CASE_PASSTHRU -8
 
 /* Will be negated. */
-#define NLEX_CASE_ANYCHAR    8
+#define NLEX_CASE_ANYCHAR    1024
 #define NLEX_CASE_DIGIT     16
 #define NLEX_CASE_EOF       32
 #define NLEX_CASE_WORDCHAR  64
@@ -47,6 +48,7 @@ typedef struct _NanTreeNode {
 	 * NULL for non-Kleene nodes.
 	 */
 	struct _NanTreeNode * klnptr;
+	NanTreeNodeId         klnstate_id_auto;
 
 	struct _NanTreeNode ** klnptr_from;
 	size_t                 klnptr_from_len;
@@ -64,7 +66,13 @@ typedef struct _NanCharacterList {
 	size_t          count;
 } NanCharacterList;
 
-void nan_inode_to_code(NanTreeNode * node);
+extern NanTreeNodeId treebuild_id_lastact;
+extern NanTreeNodeId treebuild_id_lastnonact;
+
+/* @param pseudonode True if called for node->klnstate_id_auto */
+void nan_inode_to_code(NanTreeNode * node, bool pseudonode);
+
+void nan_inode_to_code_matchbranch(NanTreeNode * tptr);
 
 static inline void nan_tree_unvisit(NanTreeNode * root)
 {
@@ -83,16 +91,54 @@ static inline void nan_treenode_init(NanTreeNode * root)
 	root->sibling     = NULL;
 	root->ptr         = NULL;
 	root->klnptr      = NULL;
+	root->klnstate_id_auto = 0;
 	root->klnptr_from = NULL;
 	root->klnptr_from_len = 0;
 	root->id          = 0;
 	root->visited     = false;
 }
 
+// TODO make non-inline
+static inline bool
+	nan_treenode_is_klndst(NanTreeNode * tptr)
+{
+	if(tptr->ch != NLEX_CASE_PASSTHRU) {
+		return tptr->klnptr_from_len > 0;
+	}
+	else {
+		NanTreeNode * chld = NULL;
+		for(chld = tptr->first_child; chld; chld = chld->sibling)
+			if(nan_treenode_is_klndst(chld) > 0)
+				return true;
+	}
+
+	return false;
+}
+
+static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
+{
+	/* Make the action node ids odd and others even.
+	 * This is for easy identification at runtime.
+	 */
+	
+	if(node->id == 0) {
+		if(node->ch == NLEX_CASE_ACT)
+			node->id = ((++treebuild_id_lastact) * 2) + 1;
+		else
+			node->id = ((++treebuild_id_lastnonact) * 2);
+	}
+
+	return node->id;
+}
+
 static inline void
 	nan_treenode_set_klnptr(NanTreeNode * node, NanTreeNode * klnptr)
 {
+	if(!klnptr)
+		klnptr = node;
+
 	node->klnptr = klnptr;
+	node->klnstate_id_auto = ((++treebuild_id_lastnonact) * 2);
 
 	if(klnptr) {
 		klnptr->klnptr_from_len++;
@@ -138,9 +184,6 @@ static inline void
 	assert( (node->ch < 0) && (-(node->ch) & NLEX_CASE_LIST) );
 	node->ptr = cl;
 }
-
-extern NanTreeNodeId treebuild_id_lastact;
-extern NanTreeNodeId treebuild_id_lastnonact;
 
 /* Print a character to the C source code output with escaping if needed */
 static inline void
@@ -225,31 +268,14 @@ bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed);
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
 
 static inline void
-	nan_tree_node_convert_to_kleene(NanTreeNode * node, NanTreeNode * parent)
+	nan_tree_node_convert_to_kleene(NanTreeNode * node, NanTreeNode * klnptr)
 {
 	assert(node);
-	assert(parent);
-	nan_treenode_set_klnptr(node, parent);
+	nan_treenode_set_klnptr(node, klnptr);
 }
 
 /* Conversion of intermediate nodes */
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed);
-
-static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
-{
-	/* Make the action node ids odd and others even.
-	 * This is for easy identification at runtime.
-	 */
-	
-	if(node->id == 0) {
-		if(node->ch == NLEX_CASE_ACT)
-			node->id = ((++treebuild_id_lastact) * 2) + 1;
-		else
-			node->id = ((++treebuild_id_lastnonact) * 2);
-	}
-
-	return node->id;
-}
 
 /* TODO FIXME This comparison is order-sensitive for lists. */
 /* TODO what if one node is single character and the other is a single-element list? */

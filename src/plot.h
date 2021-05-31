@@ -4,7 +4,6 @@
  * File started on 2021-01-29
  */
 
-#ifdef DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,4 +29,3 @@ static inline void nan_plot(NanTreeNode * root)
 	fclose(fp);
 }
 
-#endif

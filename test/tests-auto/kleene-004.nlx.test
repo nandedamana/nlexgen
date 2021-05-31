@@ -1,6 +1,9 @@
+a	a-
 ab	aBKLNP-
 abb	aBKLNP-
+abbq	aBKLNPq-
 abs	abs-
 abq	abq-
-bq	BKLNPq-
-abq	aBKLNPq-
+bq	BKLNSq-
+q	BKLNSq-
+aq	aBKLNSq-

@@ -4,8 +4,6 @@
  * File started on 2021-01-29
  */
 
-#ifdef DEBUG
-
 #include <ctype.h>
 #include <stdio.h>
 
@@ -74,7 +72,6 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 	}
 	
 	if(node->klnptr)
-		fprintf(fp, "%u -> %u [label=\"*\"];\n", nan_tree_node_id(node), nan_tree_node_id(node->klnptr));
+		fprintf(fp, "%u -> %u [label=\"* %u\"];\n", nan_tree_node_id(node), nan_tree_node_id(node->klnptr), node->klnstate_id_auto);
 }
 
-#endif

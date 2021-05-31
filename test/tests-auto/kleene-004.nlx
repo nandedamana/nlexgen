@@ -1,6 +1,7 @@
+a	printf("a-");
 ab+	printf("aBKLNP-");
+abq	printf("abq-");
 ab+q	printf("aBKLNPq-");
 ab*q	printf("aBKLNSq-");
-abq	printf("abq-");
 abs	printf("abs-");
 b*q	printf("BKLNSq-");
