@@ -283,16 +283,15 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed);
 /* TODO FIXME This comparison is order-sensitive for lists. */
 /* TODO what if one node is single character and the other is a single-element list? */
 // TODO make non-inline
-static inline _Bool
+static inline bool
 	nan_tree_nodes_match(NanTreeNode * node1, NanTreeNode * node2)
 {
-	_Bool matches;
 
-	NanCharacterList * nclist1;
-	NanCharacterList * nclist2;
+	NanCharacterList * nclist1 = NULL;
+	NanCharacterList * nclist2 = NULL;
 	
-	_Bool free1; /* Free list1 after comparison */
-	_Bool free2;
+	_Bool free1 = 0; /* Free list1 after comparison */
+	_Bool free2 = 0;
 
 	/* Four possibilities with two nodes since each can be either a
 	 * single character node or list node.
@@ -300,6 +299,9 @@ static inline _Bool
 	 * The easy way for others is to convert the single character one(s) to
 	 * list node(s) before comparison.
 	 */
+
+	if(node1->ch == NLEX_CASE_PASSTHRU || node2->ch == NLEX_CASE_PASSTHRU)
+		return false;
 
 	/* Case: both are single character nodes */
 	if( (node1->ch >= 0 || !(-(node1->ch) & NLEX_CASE_LIST)) &&
@@ -327,17 +329,22 @@ static inline _Bool
 		free2 = 1;
 	}
 	
-	matches = 1;
+	bool matches = true;
 
 	int i = 0;
 	
-	while(i < nclist1->count &&	i < nclist2->count) {
-		if(nclist1->list[i] != nclist2->list[i]) {
-			matches = 0;
-			break;
+	if(nclist1->count !=	nclist2->count) {
+		matches = false;
+	}
+	else {
+		while(i < nclist1->count) {
+			if(nclist1->list[i] != nclist2->list[i]) {
+				matches = false;
+				break;
+			}
+			
+			i++;
 		}
-		
-		i++;
 	}
 	
 	/* Free the list created by this function. */
@@ -397,6 +404,53 @@ static inline void nan_tree_assign_node_ids(NanTreeNode * root)
 {
 	nan_tree_unvisit(root);
 	nan_tree_assign_node_ids_rec(root);
+}
+
+static inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * chld)
+{
+	if(!node->first_child) {
+		node->first_child = chld;
+	}
+	else {
+		NanTreeNode * tptr = node->first_child;
+		while(tptr) {
+			if(! tptr->sibling) {
+				tptr->sibling = chld;
+				break;
+			}
+		
+			tptr = tptr->sibling;
+		}
+	}
+}
+
+static inline void nan_merge_treenodes(NanTreeNode * node1, NanTreeNode * node2)
+{
+	if(node2->first_child)
+		nan_tree_node_append_child(node1, node2->first_child);
+
+	free(node2);
+}
+
+static inline void nan_merge_adjacent_siblings(NanTreeNode * node1, NanTreeNode * node2)
+{
+	assert(node1->sibling == node2);
+
+	node1->sibling = node2->sibling;
+	nan_merge_treenodes(node1, node2);
+}
+
+void nan_tree_simplify(NanTreeNode * root);
+
+static inline bool nan_treenode_has_action(NanTreeNode * root)
+{
+	NanTreeNode * chld = NULL;
+	
+	for(chld = root->first_child; chld; chld = chld->sibling)
+		if(chld->ch == NLEX_CASE_ACT)
+			return true;
+
+	return false;
 }
 
 #endif

@@ -186,24 +186,6 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 	fprintf(fpout, "}\n");
 }
 
-static inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * chld)
-{
-	if(!node->first_child) {
-		node->first_child = chld;
-	}
-	else {
-		NanTreeNode * tptr = node->first_child;
-		while(tptr) {
-			if(! tptr->sibling) {
-				tptr->sibling = chld;
-				break;
-			}
-		
-			tptr = tptr->sibling;
-		}
-	}
-}
-
 bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
 {
 	NanTreeNode * tptr;
@@ -596,4 +578,40 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 		nan_tree_istates_to_code(tptr, true);
 
 	return;
+}
+
+void nan_tree_simplify(NanTreeNode * root)
+{
+	NanTreeNode * chld = NULL;
+
+	/* Merge adjacent siblings with the same content */
+	chld = root->first_child;
+	while(chld) {
+		if(chld->sibling && nan_tree_nodes_match(chld, chld->sibling)) {
+			/* Not because extra work is needed while merging;
+			 * rather, merging such a node will change the meaning.
+			 */
+			// TODO check: no actual problem merging nodes with act children?
+			bool can_merge =
+				chld->sibling &&
+				(chld->klnptr == NULL) &&
+				(chld->klnptr_from_len <= 0) &&
+				(nan_treenode_has_action(chld) == false) &&
+				(chld->sibling->klnptr == NULL) &&
+				(chld->sibling->klnptr_from_len <= 0) &&
+				(nan_treenode_has_action(chld->sibling) == false);
+			
+			/* Yes, chld->sibling might get checked again in the next iteration;
+			 * not worrying about it now.
+			 */
+
+			if(can_merge)
+				nan_merge_adjacent_siblings(chld, chld->sibling);
+		}
+
+		chld = chld->sibling;
+	}
+
+	for(chld = root->first_child; chld; chld = chld->sibling)
+		nan_tree_simplify(chld);
 }

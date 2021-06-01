@@ -13,10 +13,20 @@
 
 int main(int argc, char * argv[])
 {
-	FILE *fpin;
+	FILE *fpin = NULL;
+	bool simplify = true;
 
-	if(argc == 2) {
-		fpin = fopen(argv[1], "r");
+	size_t filearg = 1;
+
+	if(argc > 1) {
+		if(0 == strcmp(argv[1], "--no-simplify")) {
+			simplify = false;
+			filearg++;
+		}
+	}
+
+	if(argc > filearg) {
+		fpin = fopen(argv[filearg], "r");
 		if(!fpin)
 			nlex_die("Error opening the input file.");
 	}
@@ -35,7 +45,10 @@ int main(int argc, char * argv[])
 	const char * err = nan_tree_build(&troot, nh);
 	if(err != NLEXERR_SUCCESS)
 		nlex_die(err);
-	 
+
+	if(simplify)
+		nan_tree_simplify(&troot);
+
 	nan_tree_unvisit(&troot);
 	// TODO FIXME currently both this fun and other funs use nan_tree_node_id(), which sets the id if not set already. split it as getter and setter. Only this fun should use the setter.
 	nan_tree_assign_node_ids(&troot);
