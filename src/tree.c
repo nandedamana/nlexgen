@@ -586,8 +586,10 @@ void nan_tree_simplify(NanTreeNode * root)
 
 	/* Merge adjacent siblings with the same content */
 	chld = root->first_child;
-	while(chld) {
-		if(chld->sibling && nan_tree_nodes_match(chld, chld->sibling)) {
+	while(chld && chld->sibling) {
+		bool merged = false;
+	
+		if(nan_tree_nodes_match(chld, chld->sibling)) {
 			/* Not because extra work is needed while merging;
 			 * rather, merging such a node will change the meaning.
 			 */
@@ -605,11 +607,18 @@ void nan_tree_simplify(NanTreeNode * root)
 			 * not worrying about it now.
 			 */
 
-			if(can_merge)
+			if(can_merge) {
 				nan_merge_adjacent_siblings(chld, chld->sibling);
+				merged = true;
+			}
 		}
 
-		chld = chld->sibling;
+		/* XXX Move on to the next node only if there was no merge,
+		 * or the current and the next nodes won't get merged even
+		 * if they match.
+		 */
+		if(!merged)
+			chld = chld->sibling;
 	}
 
 	for(chld = root->first_child; chld; chld = chld->sibling)
