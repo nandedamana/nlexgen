@@ -21,6 +21,7 @@
 /* Will be negated. */
 #define NLEX_CASE_ANYCHAR    1024
 #define NLEX_CASE_DIGIT     16
+#define NLEX_CASE_LETTER    2048
 #define NLEX_CASE_EOF       32
 #define NLEX_CASE_WORDCHAR  64
 #define NLEX_CASE_LIST     128
@@ -196,6 +197,8 @@ static inline void
 			fprintf(fp, "(%s != 0 && %s != EOF)", id, id);
 		else if(-c & NLEX_CASE_DIGIT)
 			fprintf(fp, "isdigit(%s)", id);
+		else if(-c & NLEX_CASE_LETTER)
+			fprintf(fp, "isalpha(%s)", id);
 		else if(-c & NLEX_CASE_EOF)
 			fprintf(fp, "%s == EOF", id);
 		else if(-c & NLEX_CASE_WORDCHAR)
