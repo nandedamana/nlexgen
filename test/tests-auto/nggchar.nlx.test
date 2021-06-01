@@ -1,0 +1,9 @@
+c	
+c''	
+c'hello, world!'	
+c'a'	NGGCHAR-
+''	NGGSTR-
+'a'	NGGSTR-
+'hello, world!'	NGGSTR-
+c'a''hello, world!'	NGGCHAR-NGGSTR-
+'hello, world!'c'a'	NGGCHAR-NGGSTR-
