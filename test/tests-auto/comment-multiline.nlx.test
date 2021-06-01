@@ -10,10 +10,12 @@ var10	ID-
 10m	INT-ID-
 /* test	
 /* test */m	COMMENT-ID-
-/* test */m	COMMENT-WS-ID-
+/* test */ m	COMMENT-WS-ID-
 /* test */myvar	COMMENT-ID-
 /* test */ myvar	COMMENT-WS-ID-
-m/* test */myvar	ID-COMMENT-
-m /* test */myvar	ID-WS-COMMENT-
-myvar/* test */myvar	ID-COMMENT-
-myvar /* test */myvar	ID-WS-COMMENT-
+m/* test */	ID-COMMENT-
+m /* test */	ID-WS-COMMENT-
+myvar/* test */	ID-COMMENT-
+myvar /* test */	ID-WS-COMMENT-
+m/* test */myvar	ID-COMMENT-ID-
+m /* test */myvar	ID-WS-COMMENT-ID-
