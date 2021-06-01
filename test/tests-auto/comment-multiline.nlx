@@ -1,0 +1,4 @@
+[ ]	printf("WS-");
+/\*.*\*/     printf("COMMENT-");
+\d+	printf("INT-");
+[$\l_][\w-_]*     printf("ID-");

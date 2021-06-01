@@ -1,0 +1,18 @@
+""	
+/**/	COMMENT-
+/*test*/	COMMENT-
+/* test */	COMMENT-
+i	ID-
+myvar	ID-
+$myvar	ID-
+var10	ID-
+10	INT-
+10m	INT-ID-
+/* test */m	COMMENT-ID-
+/* test */m	COMMENT-WS-ID-
+/* test */myvar	COMMENT-ID-
+/* test */ myvar	COMMENT-WS-ID-
+m/* test */myvar	ID-COMMENT-
+m /* test */myvar	ID-WS-COMMENT-
+myvar/* test */myvar	ID-COMMENT-
+myvar /* test */myvar	ID-WS-COMMENT-
