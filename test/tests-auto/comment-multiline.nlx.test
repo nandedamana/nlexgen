@@ -8,6 +8,7 @@ $myvar	ID-
 var10	ID-
 10	INT-
 10m	INT-ID-
+/* test	
 /* test */m	COMMENT-ID-
 /* test */m	COMMENT-WS-ID-
 /* test */myvar	COMMENT-ID-
