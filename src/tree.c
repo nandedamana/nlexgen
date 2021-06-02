@@ -568,14 +568,18 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 	if(if_printed)
 		fprintf(fpout, "else ");
 
+	if(root->sibling)
+		fprintf(fpout, "if(nh->curstate >= %u && nh->curstate < %u) {", nan_tree_node_id(root), nan_tree_node_id(root->sibling));
+
 	fprintf(fpout, "if(nh->curstate == %u) {", nan_tree_node_id(root));
-
 	nan_inode_to_code(root, false);
-
 	fprintf(fpout, "}\n");
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
 		nan_tree_istates_to_code(tptr, true);
+
+	if(root->sibling)
+		fprintf(fpout, "}\n");
 
 	return;
 }
