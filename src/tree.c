@@ -110,7 +110,7 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 				nan_tree_node_id(tptr),
 				nan_tree_node_id(tptr));
 
-			#ifdef DEBUG
+			#ifdef NLXDEBUG
 			fprintf(fpout,
 				"\tfprintf(stderr, \"set hiprio_act_this_iter = %u;\\n\");\n",
 				nan_tree_node_id(tptr));

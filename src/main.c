@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
 		"else {\n"        /* Reading from string */
 			"\tif(nh->bufptr >= nh->buf && nlex_last(nh) == 0)\n\t\tbreak;\n"
 		"}"
-#ifdef DEBUG
+#ifdef NLXDEBUG
 // TODO rem because slow - or truncate the output (and print a notice about it).
 //		"if(nh->buf)"
 //		"\tfprintf(stderr, "
@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
 		"assert(ch_set);\n"
 		"_Bool match = 0;\n"
 		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
-#ifdef DEBUG
+#ifdef NLXDEBUG
 		fprintf(fpout,
 		"\tfprintf(stderr, "
 		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
 	fprintf(fpout, "}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
 		"}\n");
-#ifdef DEBUG
+#ifdef NLXDEBUG
 	fprintf(fpout,
 		"\tfprintf(stderr, "
 		"\t\t\"before anode comparison, nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
