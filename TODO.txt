@@ -27,3 +27,16 @@ UNKNOWN DT
 2019-08-11
 ----------
 - Option to use another name instead of 'nh' (NlexHandle instance) and 'ch' (ch is equivalent to nh->last(), but a separate variable may increase performance, I think).
+
+2021-06
+-------
+* IMPORTANT use static allocation for nstack and tstack (I can predict the size, right?)
+	- what about a state getting pushed multiple times?
+* instead of the current nesting in state comparison, can I use something like binary search, WITHOUT BREAKING PRIORITY?
+* remove the on-the-go tree simplification parts (like reusing a node) from the tree construction phase.
+* remove the tree visit-unvisit system since the tree isn't cyclic anymore?
+* doc: beware of the maximal munch issue: use "[^"]*" (simple example without support for escaping) instead of ".*" or all tokens after the string will get discarded. See this in action by editing tests-auto/comment-multiline.nlx
+
+* TODO lexer loops in test files: remove EOF check now that nlexgen generates it.
+
+* nh.lastmatchat and nh.curtokpos now use int instead of size_t to store negatives without ambiguity. make sure no overflow occurs and the buffer is prevented from growing larger than these can represent.
