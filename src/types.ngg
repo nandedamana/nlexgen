@@ -45,7 +45,9 @@ class NlexHandle
 	
 	var bufptr       mstring; // Points to the character in consideration
 	var bufendptr    mstring; // Where the next block of the input can be appended
-	var lastmatchat  size; // I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr.
+	var lastmatchat  int; // I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr.
+	
+	var curtokpos int;
 
 	// Set to true if EOF has reached and the buffer was appended with 0
 	var eof_read bool;

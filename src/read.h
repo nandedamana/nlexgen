@@ -7,6 +7,7 @@
 #ifndef _N96E_LEX_READ_H
 #define _N96E_LEX_READ_H
 
+#include <assert.h>
 #include <limits.h>
 #include <memory.h>
 #include <stdio.h>
@@ -108,6 +109,8 @@ static inline NlexNString
 {
 	NlexNString ns;
 
+	assert(nh->bufptr >= nh->buf);
+
 	ns.buf = nh->buf + offset;
 	ns.len = nh->bufptr - nh->buf + 1 - offset;
 
@@ -127,6 +130,20 @@ static inline char *
 	newbuf[ns.len] = '\0';
 	
 	return newbuf;
+}
+
+static inline char *
+	nlex_tokdup(NlexHandle * nh, size_t offset)
+{
+	assert(nh->curtokpos >= 0);
+	return nlex_bufdup(nh, nh->curtokpos + offset);
+}
+
+static inline NlexNString
+	nlex_tokdup_info(NlexHandle * nh, size_t offset)
+{
+	assert(nh->curtokpos >= 0);
+	return nlex_bufdup_info(nh, nh->curtokpos + offset);
 }
 
 /**
@@ -334,6 +351,8 @@ static inline void nlex_reset_states(NlexHandle * nh)
  */
 static inline void nlex_shift(NlexHandle * nh)
 {
+	assert(nh->bufptr >= nh->buf);
+
 	size_t chars_remaining    = nh->bufendptr - nh->bufptr;
 	size_t flushed_char_count = nh->bufptr - nh->buf;
 	
@@ -344,6 +363,7 @@ static inline void nlex_shift(NlexHandle * nh)
 	nh->bufendptr = nh->buf + chars_remaining; /* Yes, just out of bound. */
 
 	nh->lastmatchat -= flushed_char_count;
+	nh->curtokpos   -= flushed_char_count;
 }
 
 static inline void nlex_swap_t_n_stacks(NlexHandle * nh)

@@ -59,6 +59,9 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	// TODO move to nlex_init()?
 	nh->tstack      = NULL;
 	nh->nstack      = NULL;
+	
+	nh->lastmatchat = -1;
+	nh->curtokpos   = -1;
 }
 
 void nlex_onerror(NlexHandle * nh, int errno)

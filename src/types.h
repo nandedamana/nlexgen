@@ -26,7 +26,8 @@ typedef struct NlexHandle {
 	char * buf;
 	char * bufptr;
 	char * bufendptr;
-	size_t lastmatchat;
+	int lastmatchat;
+	int curtokpos;
 	_Bool eof_read;
 	char * auxbuf;
 	char * auxbufptr;

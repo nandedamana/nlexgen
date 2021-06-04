@@ -77,7 +77,9 @@ int main(int argc, char * argv[])
 	// TODO why do I have both hiprio_act_this_iter and nh->last_accepted_state? Find and doc. Or did I introduce nh->last_accepted_state just keep record of it? If so, it's useless now that I reset to 0 for performance reasons.
 
 	fprintf(fpout,
+		"char ch = 0;\n"
 		"_Bool ch_set = 0;\n"
+		"nh->curtokpos = nh->lastmatchat + 1;\n"
 		"nlex_reset_states(nh);\n"
 		"nlex_nstack_push(nh, %d);\n",
 		troot.id);
@@ -131,7 +133,7 @@ int main(int argc, char * argv[])
 	fprintf(fpout, "}\n");
 	fprintf(fpout, "}\n"
 		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;");
-	fprintf(fpout, "if(ch == '\\0' || ch == EOF) break;\n");
+	fprintf(fpout, "if(nh->eof_read) break;\n"); // TODO why am I not using nh.eof_read?
 	fprintf(fpout, "}\n");
 #ifdef NLXDEBUG
 	fprintf(fpout,
