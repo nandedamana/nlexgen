@@ -130,8 +130,9 @@ int main(int argc, char * argv[])
 			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
 	fprintf(fpout, "}\n");
 	fprintf(fpout, "}\n"
-		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;"
-		"}\n");
+		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;");
+	fprintf(fpout, "if(ch == '\\0' || ch == EOF) break;\n");
+	fprintf(fpout, "}\n");
 #ifdef NLXDEBUG
 	fprintf(fpout,
 		"\tfprintf(stderr, "

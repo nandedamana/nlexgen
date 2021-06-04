@@ -34,6 +34,8 @@ NlexHandle * nlex_handle_new()
 	nh->on_consume     = NULL;
 	nh->userdata       = NULL;
 	
+	// TODO set fp, buf, etc. to NULL
+	
 	return nh;
 }
 
@@ -54,6 +56,7 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	
 	nh->auxbuf      = NULL;
 
+	// TODO move to nlex_init()?
 	nh->tstack      = NULL;
 	nh->nstack      = NULL;
 }
