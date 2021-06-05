@@ -1,0 +1,2 @@
+a(bc|d|ee)f	printf("aBCorDorEEf-");
+.*	printf("OTHER-");
