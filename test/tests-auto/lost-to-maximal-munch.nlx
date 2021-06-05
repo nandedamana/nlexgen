@@ -1,0 +1,3 @@
+ab    printf("AB-");
+abcde printf("ABCDE-");
+cd    printf("CD-");
