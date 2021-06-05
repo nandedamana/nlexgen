@@ -490,6 +490,12 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 
 void nan_tree_simplify(NanTreeNode * root)
 {
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
+
 	NanTreeNode * chld = NULL;
 
 	/* Merge adjacent siblings with the same content */
