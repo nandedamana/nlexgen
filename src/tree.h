@@ -266,7 +266,7 @@ static inline void
 }
 
 /* Conversion of action nodes */
-bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed);
+void nan_tree_astates_to_code(NanTreeNode * root);
 
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
 

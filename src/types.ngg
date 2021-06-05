@@ -25,7 +25,7 @@ alias for uint NanTreeNodeId;
 vh typedef unsigned int NanTreeNodeId;
 
 shadow function NlexErrCallback     takes nh NlexHandle, errno NlexErr;
-shadow function NlexConsumeCallback takes nh NlexHandle;
+shadow function NlexConsumeCallback takes nh NlexHandle, offset size, len size;
 
 class NlexHandle
 	// Parameters that can only be set before calling nlex_init()
@@ -45,9 +45,13 @@ class NlexHandle
 	
 	var bufptr       mstring; // Points to the character in consideration
 	var bufendptr    mstring; // Where the next block of the input can be appended
-	var lastmatchat  int; // I originally used `char * lastmatchptr`, but it caused a bug that cost me hours -- because it was set from bufptr and when the entire buf gets relocated, this pointer remained the same (not easy to adjust it either), while in a later stage it had to be assigned to bufptr.
 	
 	var curtokpos int;
+	
+	// Differs from lastmatchat (it tracks the pos of the last-matched character,
+	// regardless of the rule reaching or not reaching its accepted state;
+	// but curtoklen is set only upon reaching an accepted state).
+	var curtoklen int;
 
 	// Set to true if EOF has reached and the buffer was appended with 0
 	var eof_read bool;

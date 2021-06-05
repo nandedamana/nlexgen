@@ -101,29 +101,23 @@ static inline void nlex_auxbuf_terminate(NlexHandle * nh)
 	nlex_auxbuf_append(nh, '\0');
 }
 
-/* Returns the information regarding the buffer upto
- * the last-matched character.
- */
 static inline NlexNString
-	nlex_bufdup_info(NlexHandle * nh, size_t offset)
+	nlex_bufdup_info(NlexHandle * nh, size_t offset, size_t len)
 {
 	NlexNString ns;
 
 	assert(nh->bufptr >= nh->buf);
 
 	ns.buf = nh->buf + offset;
-	ns.len = nh->bufptr - nh->buf + 1 - offset;
+	ns.len = (len > 0)? len: (nh->bufptr - nh->buf);
 
 	return ns;
 }
 
-/* Makes a copy of the buffer upto the last-matched character
- * appended with a nullchar.
- */
 static inline char *
-	nlex_bufdup(NlexHandle * nh, size_t offset)
+	nlex_bufdup(NlexHandle * nh, size_t offset, size_t len)
 {
-	NlexNString ns = nlex_bufdup_info(nh, offset);
+	NlexNString ns = nlex_bufdup_info(nh, offset, len);
 
 	char * newbuf = nlex_malloc(nh, ns.len + 1);
 	memcpy(newbuf, ns.buf, ns.len);
@@ -133,17 +127,21 @@ static inline char *
 }
 
 static inline char *
-	nlex_tokdup(NlexHandle * nh, size_t offset)
+	nlex_tokdup(NlexHandle * nh, size_t offset, size_t rtrimlen)
 {
-	assert(nh->curtokpos >= 0);
-	return nlex_bufdup(nh, nh->curtokpos + offset);
+	assert(nh->curtoklen > 0);
+	return nlex_bufdup(nh,
+		nh->curtokpos + offset,
+		nh->curtoklen - offset - rtrimlen);
 }
 
 static inline NlexNString
-	nlex_tokdup_info(NlexHandle * nh, size_t offset)
+	nlex_tokdup_info(NlexHandle * nh, size_t offset, size_t rtrimlen)
 {
-	assert(nh->curtokpos >= 0);
-	return nlex_bufdup_info(nh, nh->curtokpos + offset);
+	assert(nh->curtoklen > 0);
+	return nlex_bufdup_info(nh,
+		nh->curtokpos + offset,
+		nh->curtoklen - offset - rtrimlen);
 }
 
 /**
@@ -362,7 +360,6 @@ static inline void nlex_shift(NlexHandle * nh)
 	nh->bufptr    = nh->buf;
 	nh->bufendptr = nh->buf + chars_remaining; /* Yes, just out of bound. */
 
-	nh->lastmatchat -= flushed_char_count;
 	nh->curtokpos   -= flushed_char_count;
 }
 

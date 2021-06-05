@@ -110,6 +110,8 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 				nan_tree_node_id(tptr),
 				nan_tree_node_id(tptr));
 
+			fprintf(fpout, "ch_read_after_accept = 0;\n");
+
 			#ifdef NLXDEBUG
 			fprintf(fpout,
 				"\tfprintf(stderr, \"set hiprio_act_this_iter = %u;\\n\");\n",
@@ -186,37 +188,30 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 	fprintf(fpout, "}\n");
 }
 
-bool nan_tree_astates_to_code(NanTreeNode * root, _Bool if_printed)
+void nan_tree_astates_to_code(NanTreeNode * root)
 {
 	NanTreeNode * tptr;
 
 	if(root->visited)
-		return if_printed;
+		return;
 	else
 		root->visited = true;
 
 	if(root->ch == NLEX_CASE_ACT) {
-		if(if_printed)
-			fprintf(fpout, "else ");
-		else
-			if_printed = 1;
+		fprintf(fpout, "case %u:\n"
+			"\tif(nh->on_consume)\n"
+			"\t\tnh->on_consume(nh, nh->curtokpos, nh->curtoklen);\n\n"
 
-		fprintf(fpout, "if(nh->last_accepted_state == %u) {\n"
-			"nh->bufptr = nh->buf + nh->lastmatchat; nh->last_accepted_state = 0;\n%s\n}\n",
+			"\t%s\n"
+			"\tbreak;\n",
 			nan_tree_node_id(root),
 			nan_treenode_get_actstr(root));
 
-		return 1;
+		return;
 	}
 
-	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
-		/* `|=` because the recursive call my return 0 but
-		 * I don't want to lose the current value if it is 1.
-		 */
-		if_printed |= nan_tree_astates_to_code(tptr, if_printed);
-	}
-	
-	return if_printed;
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_astates_to_code(tptr);
 }
 
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
@@ -259,7 +254,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			NanTreeNode * anode = nan_treenode_new(nh, NLEX_CASE_ACT);
 
 			/* Copy the action. */
-			anode->ptr = (void *) nlex_bufdup(nh, 1);
+			anode->ptr = (void *) nlex_bufdup(nh, 1, 0);
 			/* Nobody cares about first_child or sibling of an action node. */
 			
 			anode->first_child = NULL;

@@ -24,9 +24,11 @@ int main()
 	do {
 		get_token(nh);
 
+		assert(nh->bufptr >= nh->buf);
 		fprintf(stderr, "bufdiff: %zu\n", (nh->bufptr - nh->buf));
+		fprintf(stderr, "eof: %d curtoklen: %d\n", nh->eof_read, nh->curtoklen);
 
-	} while(!nh->eof_read);
+	} while(!nh->eof_read && nh->curtoklen > 0);
 
 	return 0;
 }

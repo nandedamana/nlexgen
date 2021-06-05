@@ -27,14 +27,14 @@ echo '}' >> "$ocfile"
 
 rsync "$scriptdir"'/main-for-auto.c' "$mcfile"
 
-cc -o "$elffile" "$mcfile" "$ocfile" "$(dirname "$0")"/../src/read.o -I"$(dirname "$0")"/../src
+cc -o "$elffile" -g "$mcfile" "$ocfile" "$(dirname "$0")"/../src/read.o -I"$(dirname "$0")"/../src
 
 while IFS= read -r line; do
 	inp="$(echo "$line"|cut -f 1)"
 	exp="$(echo "$line"|cut -f 2)"
 
 	echo "INPUT $inp"
-	test "$(echo -n "$inp"|timeout 4s "$elffile")" = "$exp"
+	test "$(echo -n "$inp"|timeout 1s "$elffile")" = "$exp"
 	echo "$exp"
 	echo ''
 done < "$tstfile"

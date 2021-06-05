@@ -79,7 +79,11 @@ int main(int argc, char * argv[])
 	fprintf(fpout,
 		"char ch = 0;\n"
 		"_Bool ch_set = 0;\n"
-		"nh->curtokpos = nh->lastmatchat + 1;\n"
+		"size_t ch_read_after_accept = 0;\n"
+		"int lastmatchat = -1;\n"
+		"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
+		"nh->curtoklen = 0;\n"
+		"nh->last_accepted_state = 0;\n"
 		"nlex_reset_states(nh);\n"
 		"nlex_nstack_push(nh, %d);\n",
 		troot.id);
@@ -88,6 +92,8 @@ int main(int argc, char * argv[])
 //		"while(!(nh->done) && !nlex_nstack_is_empty(nh)) {\n"
 		"while(!nlex_nstack_is_empty(nh)) {\n"
 		"nlex_nstack_fix_actions(nh);\n" // TODO FIXME update since I've moved the action nodes out of the stack
+		
+		// TODO why not just use nh->eof_read?
 		"if(nh->fp) {\n" /* Reading from file */
 			"\tif(nh->buf && (nlex_last(nh) == 0))\n\t\tbreak;\n"
 		"}"
@@ -111,8 +117,7 @@ int main(int argc, char * argv[])
 		"nlex_swap_t_n_stacks(nh);\n"
 		// TODO FIXME
 //		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
-		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); ch_set = 1; }\n"
-		"_Bool on_consume_called = 0; // see ngg bug 20200831000\n"
+		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++; }\n"
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
 		"assert(ch_set);\n"
@@ -125,15 +130,10 @@ int main(int argc, char * argv[])
 #endif
 	nan_tree_unvisit(&troot);
 	nan_tree_istates_to_code(&troot, false);
-
-	fprintf(fpout, "if(match) {\n");
-		fprintf(fpout, "\t/* Useful for line counting, col counting, etc. */\n");
-			fprintf(fpout, "\tif(!on_consume_called && nh->on_consume) { nh->on_consume(nh); on_consume_called = 1; }\n");
-			fprintf(fpout, "\tnh->lastmatchat = (nh->bufptr - nh->buf);\n");
-	fprintf(fpout, "}\n");
+	fprintf(fpout, "if(match) lastmatchat = (nh->bufptr - nh->buf);\n");
 	fprintf(fpout, "}\n"
-		"if(hiprio_act_this_iter != UINT_MAX) nh->last_accepted_state = hiprio_act_this_iter;");
-	fprintf(fpout, "if(nh->eof_read) break;\n"); // TODO why am I not using nh.eof_read?
+		"if(hiprio_act_this_iter != UINT_MAX) { nh->last_accepted_state = hiprio_act_this_iter; } \n");
+	fprintf(fpout, "if(nh->eof_read) break;\n"); // TODO EOF checking done above too. Why twice?
 	fprintf(fpout, "}\n");
 #ifdef NLXDEBUG
 	fprintf(fpout,
@@ -143,7 +143,16 @@ int main(int argc, char * argv[])
 	nan_tree_unvisit(&troot);
 
 	fprintf(fpout, "if(nh->last_accepted_state != 0) {\n");
-	nan_tree_astates_to_code(&troot, 0);
+	// TODO rem ch_read_after_accept if it'll always be 0
+	fprintf(fpout, "\tnh->curtoklen = lastmatchat - nh->curtokpos - ch_read_after_accept + 1; assert(nh->curtoklen > 0);\n");
+	fprintf(fpout, "switch(nh->last_accepted_state) {\n");
+	nan_tree_astates_to_code(&troot);
+	fprintf(fpout, "}\n");
+	fprintf(fpout, "assert(nh->curtoklen > 0);\n");
+
+	fprintf(fpout,
+		"assert(nh->curtokpos >= 0);"
+		"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */\n");
 	fprintf(fpout, "}\n");
 
 	/* END Code Generation */

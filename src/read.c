@@ -60,8 +60,8 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	nh->tstack      = NULL;
 	nh->nstack      = NULL;
 	
-	nh->lastmatchat = -1;
 	nh->curtokpos   = -1;
+	nh->curtoklen   = 0;
 }
 
 void nlex_onerror(NlexHandle * nh, int errno)

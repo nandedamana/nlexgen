@@ -20,14 +20,14 @@ typedef struct NlexNString {
 typedef struct NlexHandle {
 	size_t buf_alloc_unit;
 	void (* on_error)(struct NlexHandle * nh , NlexErr errno );
-	void (* on_consume)(struct NlexHandle * nh );
+	void (* on_consume)(struct NlexHandle * nh , size_t offset, size_t len);
 	void * userdata;
 	FILE * fp;
 	char * buf;
 	char * bufptr;
 	char * bufendptr;
-	int lastmatchat;
 	int curtokpos;
+	int curtoklen;
 	_Bool eof_read;
 	char * auxbuf;
 	char * auxbufptr;
