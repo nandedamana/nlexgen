@@ -21,14 +21,12 @@ int main()
 	
 	nlex_init(nh, stdin, NULL);	
 
-	while(1) {
+	do {
 		get_token(nh);
 
 		fprintf(stderr, "bufdiff: %zu\n", (nh->bufptr - nh->buf));
 
-		if(ch == EOF || ch == 0)
-			break;
-	}
+	} while(!nh->eof_read);
 
 	return 0;
 }
