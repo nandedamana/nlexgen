@@ -217,7 +217,6 @@ void nan_tree_astates_to_code(NanTreeNode * root)
 const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 {
 	NanTreeNode * tcurnode = root;
-	NanTreeNode * tcurnode_parent = NULL;
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
 
@@ -230,8 +229,6 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	_Bool         in_list = 0; /* [] */
 	_Bool         list_inverted = 0;
 	_Bool         join_or = 0;
-
-	bool          force_newnode_for_next_char = false;
 
 	NanCharacterList * chlist = NULL;
 
@@ -329,9 +326,6 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				
 				/* Select the new head */
 				tcurnode = lastsubxparent; // TODO pop from a stack
-
-				/* or a node could have itself as its sibling */
-				force_newnode_for_next_char = true;
 				
 				goto nextiter;
 			}
@@ -380,56 +374,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 					subexptailbak_for_kln = NULL;
 				}
 
-				/* Check if curnode has children. If no, 'a' was not used before 'a*';
-				 * this means I can directly use it.
-				 * Otherwise, I have to create a sibling.
-				 */
-
-				if(tcurnode->first_child == NULL) {
-					/* Simply convert it to a Kleene */
-					nan_tree_node_convert_to_kleene(tcurnode, klndest);
-				}
-				else {
-					/* TODO no need to do this for sub-expressions since they'll have exclusive branches anyway? */
-					/* Look for a sibling that has the same content but is a Kleene.
-					 * If not found,
-					 * create a copy, convert it to Kleene and add as sibling.
-					 */
-					
-					NanTreeNode * tptr;
-					NanTreeNode * match = NULL;
-					
-					for(tptr = tcurnode_parent->first_child; tptr; tptr = tptr->sibling) {
-						if(tptr == tcurnode)
-							continue;
-						
-						if( nan_tree_nodes_match(tptr, tcurnode) && 0 != tptr->klnptr_from_len )
-						{
-							match = tptr;
-							break;
-						}
-					}
-					
-					if(match) { /* Kleene sibling found */
-						tcurnode = tptr;
-						goto nextiter;
-					}
-					else { /* Kleene sibling NOT found */
-						/* Clone and make it Kleene */
-						
-						tptr = nlex_malloc(NULL, sizeof(NanTreeNode));
-						memcpy(tptr, tcurnode, sizeof(NanTreeNode));
-						
-						nan_tree_node_convert_to_kleene(tptr, klndest);
-						
-						tptr->id          = 0;
-						tptr->first_child = NULL;
-						tptr->sibling     = tcurnode->sibling;
-						tcurnode->sibling = tptr;
-						
-						tcurnode = tptr;
-					}
-				}
+				assert(tcurnode->first_child == NULL);
+				nan_tree_node_convert_to_kleene(tcurnode, klndest);
 
 				/* Skipping the rest because no new node is to be added */
 				goto nextiter;
@@ -466,53 +412,19 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			goto nextiter;
 		}
 
-		NanTreeNode * tmatching_node = NULL;
+		/* Create a new node */
+		NanTreeNode * newnode = nan_treenode_new(nh, ch);
+		
+		/* Again, no problem if chlist is invalid since
+		 * ch will not be NLEX_CASE_LIST in that case.
+		 */
+		newnode->ptr         = chlist;
 
-		// TODO FIXME workaround because on-the-go tree simplification results in buggy tree (for instance, I don't know in advance if the character or subexpr I've just created node(s) for is getting followed by a kleene notation). either find a solution or make this permanent, remove the code to handle the false case, and add a separate tree simplification phase.
-//		if(force_newnode_for_next_char) {
-		if(true) {
-			force_newnode_for_next_char = false;
-		}
-		else {
-			NanTreeNode * tptr;
-			
-			/* A temporary node to make the comparison easier */
-			NanTreeNode * tmpnode = nan_treenode_new(nh, ch);
+		nan_tree_node_append_child(tcurnode, newnode);
 
-			/* No problem if chlist is invalid since
-			 * ch will not be NLEX_CASE_LIST in that case.
-			 */
+		/* For the next character, this node will be the parent */
+		tcurnode = newnode;
 
-			tmpnode->ptr = chlist;
-
-			/* Check if any child of the current node represents the new character */
-			for(tptr = tcurnode->first_child; tptr; tptr = tptr->sibling) {
-				if( nan_tree_nodes_match(tptr, tmpnode) && 0 == tptr->klnptr_from_len ) {
-					tmatching_node = tptr;
-					break;
-				}
-			}
-
-			free(tmpnode);
-		}
-
-		if(tmatching_node) {
-			tcurnode_parent = tcurnode;
-			tcurnode        = tmatching_node;
-		}
-		else { /* Create a new node */
-			NanTreeNode * newnode = nan_treenode_new(nh, ch);
-			
-			/* Again, no problem if chlist is invalid since
-			 * ch will not be NLEX_CASE_LIST in that case.
-			 */
-			newnode->ptr         = chlist;
-
-			nan_tree_node_append_child(tcurnode, newnode);
-
-			/* For the next character, this node will be the parent */
-			tcurnode = newnode;
-		}
 		
 		if(join_or) {
 			if(subexptailbak) { // TODO remove from a queue
