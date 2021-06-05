@@ -233,7 +233,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanCharacterList * chlist = NULL;
 
 	nan_treenode_init(root);
-	root->ch          = NLEX_CASE_ROOT;
+	root->ch = NLEX_CASE_ROOT;
 	
 	/* ID has to be even because it is a non-action node;
 	 * 0 cannot be used because it is a marker (do-not-care cases).
@@ -251,10 +251,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			NanTreeNode * anode = nan_treenode_new(nh, NLEX_CASE_ACT);
 
 			/* Copy the action. */
-			anode->ptr = (void *) nlex_bufdup(nh, 1, 0);
-			/* Nobody cares about first_child or sibling of an action node. */
-			
-			anode->first_child = NULL;
+			nan_treenode_set_actstr(anode, nlex_bufdup(nh, 1, 0));
 			
 			nan_tree_node_append_child(tcurnode, anode);
 			/* END Attach the action node to the tree */			
@@ -412,12 +409,12 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 			goto nextiter;
 		}
 
-		/* Create a new node */
 		NanTreeNode * newnode = nan_treenode_new(nh, ch);
 		
 		/* Again, no problem if chlist is invalid since
 		 * ch will not be NLEX_CASE_LIST in that case.
 		 */
+		// TODO FIXME why does nan_treenode_set_charlist() fail?
 		newnode->ptr         = chlist;
 
 		nan_tree_node_append_child(tcurnode, newnode);

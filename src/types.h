@@ -1,8 +1,7 @@
 #ifndef _N96E_LEX_TYPES_H
 #define _N96E_LEX_TYPES_H
 
- typedef int NlexCharacter;
-
+typedef int NlexCharacter;
 typedef enum NlexErr {
 	NLEX_ERR_NONE = 0,
 	NLEX_ERR_MALLOC,
@@ -15,8 +14,7 @@ typedef struct NlexNString {
 	size_t len;
 } NlexNString;
 
- typedef unsigned int NanTreeNodeId;
-
+typedef unsigned int NanTreeNodeId;
 typedef struct NlexHandle {
 	size_t buf_alloc_unit;
 	void (* on_error)(struct NlexHandle * nh , NlexErr errno );
