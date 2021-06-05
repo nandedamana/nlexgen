@@ -16,7 +16,7 @@
 #include "error.h"
 #include "types.h"
 
-#define NLEX_DEFT_BUF_ALLOC_UNIT 4096
+#define NLEX_DEFT_BUF_ALLOC_UNIT BUFSIZ
 
 // TODO make the latter number the maximum expected concurrent states
 #define NLEX_STATESTACK_ALLOC_UNIT 32
