@@ -27,9 +27,6 @@ typedef struct NlexHandle {
 	int curtokpos;
 	int curtoklen;
 	_Bool eof_read;
-	char * auxbuf;
-	char * auxbufptr;
-	char * auxbufend;
 	unsigned int curstate;
 	unsigned int last_accepted_state;
 	unsigned int * tstack ;
@@ -38,8 +35,6 @@ typedef struct NlexHandle {
 	unsigned int * nstack ;
 	size_t nstack_top;
 	size_t nstack_allocsiz;
-	_Bool done;
-	void * data;
 } NlexHandle;
 
 static inline void NlexHandle_construct(NlexHandle * this)

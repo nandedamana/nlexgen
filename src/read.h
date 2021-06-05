@@ -71,36 +71,6 @@ static inline void * nlex_realloc(NlexHandle * nh, void * ptr, size_t size)
 	return newptr;
 }
 
-static inline void nlex_auxbuf_append(NlexHandle * nh, const char c)
-{
-	if(nh->auxbufptr == nh->auxbufend) {
-		size_t curlen = nh->auxbufend - nh->auxbuf;
-
-		nh->auxbuf    = nlex_realloc(nh, nh->auxbuf, curlen + nh->buf_alloc_unit);
-
-		/* Because realloc() may relocate the buffer */
-		nh->auxbufptr = nh->auxbuf + curlen;
-		
-		nh->auxbufend = nh->auxbufptr + nh->buf_alloc_unit;
-	}
-
-	*(nh->auxbufptr++) = c;
-}
-
-static inline void nlex_auxbuf_init(NlexHandle * nh)
-{
-	if(nh->auxbuf == NULL)
-		nh->auxbuf = nlex_malloc(nh, nh->buf_alloc_unit);
-	
-	nh->auxbufptr = nh->auxbuf;
-	nh->auxbufend = nh->auxbuf + nh->buf_alloc_unit; /* Next-to-the-last-byte */
-}
-
-static inline void nlex_auxbuf_terminate(NlexHandle * nh)
-{
-	nlex_auxbuf_append(nh, '\0');
-}
-
 static inline NlexNString
 	nlex_bufdup_info(NlexHandle * nh, size_t offset, size_t len)
 {
@@ -340,7 +310,6 @@ static inline void nlex_reset_states(NlexHandle * nh)
 	nh->nstack_allocsiz = 0;
 	nh->nstack_top = 0;
 
-	nh->done       = 0; // TODO needed?
 	nh->last_accepted_state = 0;
 }
 

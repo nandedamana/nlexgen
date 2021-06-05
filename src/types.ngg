@@ -56,11 +56,6 @@ class NlexHandle
 	// Set to true if EOF has reached and the buffer was appended with 0
 	var eof_read bool;
 	
-	// Auxilliary buffer, user-defined purpose TODO needed actually?
-	var auxbuf     mstring;
-	var auxbufptr  mstring; // Next byte to write
-	var auxbufend  mstring; // Precalculated for efficient comparison
-	
 	var curstate             NanTreeNodeId;
 	var last_accepted_state  NanTreeNodeId;
 	
@@ -76,9 +71,4 @@ class NlexHandle
 	var nstack array of uint; // TODO FIXME
 	var nstack_top     size;
 	var nstack_allocsiz size;
-
-	var done bool; // TODO rem?
-	
-	// For custom data (will not be initialized to NULL by nlex_*())
-	var data pointer;
 ;

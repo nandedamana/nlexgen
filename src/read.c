@@ -54,8 +54,6 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 	
 	nh->eof_read    = 0;
 	
-	nh->auxbuf      = NULL;
-
 	// TODO move to nlex_init()?
 	nh->tstack      = NULL;
 	nh->nstack      = NULL;
