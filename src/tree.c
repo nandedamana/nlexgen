@@ -13,31 +13,6 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
-// TODO move
-void nan_inode_to_code_kleene_skipping(NanTreeNode * node)
-{
-	NanTreeNode * tptr = NULL;
-
-	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
-		// TODO FIXME this makes tests-auto/subx-001.nlx pass, but fail some including str-dq.nlx
-
-		if(tptr->ch == NLEX_CASE_PASSTHRU) {
-			nan_inode_to_code_kleene_skipping(tptr);
-		}
-
-		if(tptr->klnptr_from) {
-			size_t len = nan_tree_node_vector_get_count(tptr->klnptr_from);
-
-			for(size_t i = 0; i < len; i++) {
-				NanTreeNode * ni = nan_tree_node_vector_get_item(tptr->klnptr_from, i);
-				assert(ni);
-
-				nan_inode_to_code(ni, true);
-			}
-		}
-	}
-}
-
 void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 {
 	NanTreeNode * tptr = NULL;
@@ -191,6 +166,28 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 	fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
 
 	fprintf(fpout, "}\n");
+}
+
+void nan_inode_to_code_kleene_skipping(NanTreeNode * node)
+{
+	NanTreeNode * tptr = NULL;
+
+	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->ch == NLEX_CASE_PASSTHRU) {
+			nan_inode_to_code_kleene_skipping(tptr);
+		}
+
+		if(tptr->klnptr_from) {
+			size_t len = nan_tree_node_vector_get_count(tptr->klnptr_from);
+
+			for(size_t i = 0; i < len; i++) {
+				NanTreeNode * ni = nan_tree_node_vector_get_item(tptr->klnptr_from, i);
+				assert(ni);
+
+				nan_inode_to_code(ni, true);
+			}
+		}
+	}
 }
 
 void nan_tree_astates_to_code(NanTreeNode * root)

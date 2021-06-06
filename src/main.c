@@ -48,7 +48,7 @@ int main(int argc, char * argv[])
 	if(!nh)
 		nlex_die("nlex_handle_new() returned NULL.");
 
-	nlex_init(nh, fpin, NULL); // TODO FIXME not always stdin
+	nlex_init(nh, fpin, NULL);
 
 	NanTreeNode troot;
 	const char * err = nan_tree_build(&troot, nh);
@@ -75,7 +75,6 @@ int main(int argc, char * argv[])
 			nlex_die("Error opening the input file.");
 
 		nan_plot(&troot, fpo);
-		fprintf(stderr, "tree dump complete.\n"); // TODO REM
 
 		fclose(fpo);
 	}
@@ -97,8 +96,6 @@ int main(int argc, char * argv[])
 		"nlex_nstack_push(nh, %d);\n",
 		troot.id);
 	fprintf(fpout,
-// TODO rem
-//		"while(!(nh->done) && !nlex_nstack_is_empty(nh)) {\n"
 		"while(!nlex_nstack_is_empty(nh)) {\n"
 		"nlex_nstack_fix_actions(nh);\n" // TODO FIXME update since I've moved the action nodes out of the stack
 		
@@ -110,11 +107,6 @@ int main(int argc, char * argv[])
 			"\tif(nh->bufptr >= nh->buf && nlex_last(nh) == 0)\n\t\tbreak;\n"
 		"}"
 #ifdef NLXDEBUG
-// TODO rem because slow - or truncate the output (and print a notice about it).
-//		"if(nh->buf)"
-//		"\tfprintf(stderr, "
-//		"\t\t\"bufptr:\\n\"); nlex_debug_print_bufptr(nh, stderr); puts(\"\");\n"
-
 		"if(nh->buf)"		
 		"\tfprintf(stderr, "
 		"\t\t\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
@@ -124,8 +116,6 @@ int main(int argc, char * argv[])
 		"nlex_nstack_dump(nh);\n"
 #endif
 		"nlex_swap_t_n_stacks(nh);\n"
-		// TODO FIXME
-//		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); }else {nlex_die(\"OK\");}\n"
 		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++; }\n"
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
