@@ -6,8 +6,9 @@
 
 #include <assert.h>
 
-#include "tree.h"
 #include "error.h"
+#include "tree.h"
+#include "tree_types.h"
 
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
@@ -224,7 +225,8 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
 
-	NanTreeNode * subexptailbak = NULL;
+	NanTreeNodeVector * subxtailbakvec = nan_tree_node_vector_new();
+
 	NanTreeNode * subexptailbak_for_kln = NULL;
 
 	NlexCharacter ch;
@@ -320,9 +322,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 				// TODO check if allowed
 
 				/* For rejoining later */
-				// TODO insert into a queue to allow multiple ORs
-				// TODO also, keep a stack of these queues to support nested sub-expressions?
-				subexptailbak = tcurnode;
+				nan_tree_node_vector_append(subxtailbakvec, tcurnode);
+				
+				// TODO why am I tracking this separate?
 				subexptailbak_for_kln = tcurnode;
 				
 				/* Select the new head */
@@ -422,7 +424,13 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 		
 		if(join_or) {
-			if(subexptailbak) { // TODO remove from a queue
+			size_t count = nan_tree_node_vector_get_count(subxtailbakvec);
+		
+			for(size_t i = 0; i < count; i++) {
+				NanTreeNode * subexptailbak =
+					nan_tree_node_vector_get_item(subxtailbakvec, i);
+				assert(subexptailbak);
+
 				if(subexptailbak->first_child == NULL) {
 					subexptailbak->first_child = tcurnode;
 				}
@@ -434,9 +442,9 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 						}
 					}
 				}
-
-				subexptailbak = NULL;
 			}
+
+			nan_tree_node_vector_clear(subxtailbakvec);
 
 			join_or = 0;
 		}
