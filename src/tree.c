@@ -364,12 +364,6 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 				/* tcurnode points to the last added node */
 
-				/* TODO should be modified considering the introduction of dot and other features (if any).
-				if(tcurnode->ch < 0 && !(-(tcurnode->ch) & NLEX_CASE_LIST)) {
-					nlex_die("Kleene star is allowed for single characters and lists only."); // TODO line and col
-				}
-				*/
-
 				if(prvch == ')' && subexptailbak_for_kln) {
 					nan_tree_node_convert_to_kleene(subexptailbak_for_kln, klndest);
 					subexptailbak_for_kln = NULL;
