@@ -35,4 +35,4 @@ nlexgen:$(OBJS)
 	cc $(CFLAGS) -o nlexgen $(OBJS)
 
 clean:
-	rm -f nlexgen *.o error.[ch] types.h
+	rm -f nlexgen *.o error.[ch] types.h tree_types.[ch]
