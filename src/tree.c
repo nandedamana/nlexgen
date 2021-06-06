@@ -516,7 +516,6 @@ void nan_tree_simplify(NanTreeNode * root)
 			/* Not because extra work is needed while merging;
 			 * rather, merging such a node will change the meaning.
 			 */
-			// TODO check: no actual problem merging nodes with act children?
 			bool can_merge =
 				(chld->klnptr == NULL) &&
 				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->klnptr_from) <= 0) &&
