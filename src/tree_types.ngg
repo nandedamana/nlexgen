@@ -1,0 +1,55 @@
+// tree_types.ngg
+// This file is part of nlexgen, a lexer generator.
+// Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+// File started on 2021-06-06, migrating previously written C code.
+
+refer vector;
+refer 'types.ngg';
+
+/* XXX 'Nan' prefix is used to distinguish internal components from
+ * the components that can be used by other programs.
+ */
+
+/* To match multiple characters at a time */
+class NanCharacterList
+	// TODO FIXME ngg doesn't accept alias as a type
+	// var list   array of NlexCharacter;
+	var list   array of int;
+	var count  size;
+;
+
+union NanTreeNodeData
+	var chlist NanCharacterList;
+	var actstr mstring;
+;
+
+class NanTreeNode
+	var id NanTreeNodeId;
+
+  var ch NlexCharacter;
+
+  var data NanTreeNodeData;
+
+	/* Points to the first node in the Kleene sub-expression (points to self
+	 * if only one node in the Kleene group.)
+	 * NULL for non-Kleene nodes.
+	 */
+	var klnptr           NanTreeNode;
+	var klnstate_id_auto NanTreeNodeId;
+
+	var klnptr_from  NanTreeNodeVector;
+
+	var first_child  NanTreeNode;
+	var sibling      NanTreeNode;
+	
+	/* Because this is a graph and a node can have multiple parents */
+	var visited bool;
+;
+
+
+bake vector with NanTreeNode as NanTreeNodeVector;
+
+// TODO once everything has migrated to ngg
+function nan-tree-node-vector-new gives NanTreeNodeVector
+	return new NanTreeNodeVector;
+;

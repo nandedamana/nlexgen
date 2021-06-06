@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include "error.h"
 #include "read.h"
+#include "tree_types.h"
 #include "types.h"
 
 #define NLEX_CASE_NONE    -1
@@ -27,45 +28,9 @@
 #define NLEX_CASE_LIST     128
 #define NLEX_CASE_INVERT   512
 
-#define NAN_CHARACTER_LIST(x) ((NanCharacterList *) (x))
-
 /* XXX 'Nan' prefix is used to distinguish internal components from
  * the components that can be used by other programs.
  */
-
-typedef struct _NanTreeNode {
-	NanTreeNodeId         id;
-
-  NlexCharacter         ch;
-
-	/* If ch is NLEX_CASE_ACT, ptr points to the user-given output code.
-	 * If ch is NLEX_CASE_LIST, ptr points to the a NanCharacterList.
-	 * Otherwise unused and may hold junk value.
-	 */
-  const void          * ptr;
-
-	/* Points to the first node in the Kleene sub-expression (points to self
-	 * if only one node in the Kleene group.)
-	 * NULL for non-Kleene nodes.
-	 */
-	struct _NanTreeNode * klnptr;
-	NanTreeNodeId         klnstate_id_auto;
-
-	struct _NanTreeNode ** klnptr_from;
-	size_t                 klnptr_from_len;
-
-	struct _NanTreeNode * first_child;
-	struct _NanTreeNode * sibling;
-	
-	/* Because this is a graph and a node can have multiple parents */
-	bool visited;
-} NanTreeNode;
-
-/* To match multiple characters at a time */
-typedef struct _NanCharacterList {
-	NlexCharacter * list;
-	size_t          count;
-} NanCharacterList;
 
 extern NanTreeNodeId treebuild_id_lastact;
 extern NanTreeNodeId treebuild_id_lastnonact;
@@ -90,11 +55,10 @@ static inline void nan_treenode_init(NanTreeNode * root)
 {
 	root->first_child = NULL;
 	root->sibling     = NULL;
-	root->ptr         = NULL;
+	root->data.actstr = NULL;
 	root->klnptr      = NULL;
 	root->klnstate_id_auto = 0;
 	root->klnptr_from = NULL;
-	root->klnptr_from_len = 0;
 	root->id          = 0;
 	root->visited     = false;
 }
@@ -104,7 +68,7 @@ static inline bool
 	nan_treenode_is_klndst(NanTreeNode * tptr)
 {
 	if(tptr->ch != NLEX_CASE_PASSTHRU) {
-		return tptr->klnptr_from_len > 0;
+		return tptr->klnptr_from && (nan_tree_node_vector_get_count(tptr->klnptr_from) > 0);
 	}
 	else {
 		NanTreeNode * chld = NULL;
@@ -135,20 +99,18 @@ static inline NanTreeNodeId nan_tree_node_id(NanTreeNode * node)
 static inline void
 	nan_treenode_set_klnptr(NanTreeNode * node, NanTreeNode * klnptr)
 {
+	assert(node);
+
 	if(!klnptr)
 		klnptr = node;
 
 	node->klnptr = klnptr;
 	node->klnstate_id_auto = ((++treebuild_id_lastnonact) * 2);
 
-	if(klnptr) {
-		klnptr->klnptr_from_len++;
-		// TODO Use nlex_realloc()
-		klnptr->klnptr_from = realloc(klnptr->klnptr_from, sizeof(klnptr->klnptr_from[0]) * klnptr->klnptr_from_len);
-		assert(klnptr->klnptr_from);
+	if(!klnptr->klnptr_from)
+		klnptr->klnptr_from = nan_tree_node_vector_new();
 
-		klnptr->klnptr_from[klnptr->klnptr_from_len - 1] = node;
-	}
+	nan_tree_node_vector_append(klnptr->klnptr_from, node);
 }
 
 static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
@@ -163,27 +125,27 @@ static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
 static inline const char * nan_treenode_get_actstr(const NanTreeNode * node)
 {
 	assert( node->ch == NLEX_CASE_ACT );
-	return (const char *) node->ptr;
+	return (const char *) node->data.actstr;
 }
 
 static inline NanCharacterList *
 	nan_treenode_get_charlist(const NanTreeNode * node)
 {
 	assert( (node->ch < 0) && (-(node->ch) & NLEX_CASE_LIST) );
-	return NAN_CHARACTER_LIST(node->ptr);
+	return node->data.chlist;
 }
 
-static inline void nan_treenode_set_actstr(NanTreeNode * node, const char * s)
+static inline void nan_treenode_set_actstr(NanTreeNode * node, char * s)
 {
 	assert( node->ch == NLEX_CASE_ACT );
-	node->ptr = s;
+	node->data.actstr = s;
 }
 
 static inline void
 	nan_treenode_set_charlist(NanTreeNode * node, NanCharacterList * cl)
 {
 	assert( (node->ch < 0) && (-(node->ch) & NLEX_CASE_LIST) );
-	node->ptr = cl;
+	node->data.chlist = cl;
 }
 
 /* Print a character to the C source code output with escaping if needed */

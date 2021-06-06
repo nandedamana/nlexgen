@@ -25,9 +25,13 @@ void nan_inode_to_code_kleene_skipping(NanTreeNode * node)
 		}
 
 		if(tptr->klnptr_from) {
-			for(size_t i = 0; i < tptr->klnptr_from_len; i++) {
-				assert(tptr->klnptr_from[i]);
-				nan_inode_to_code(tptr->klnptr_from[i], true);
+			size_t len = nan_tree_node_vector_get_count(tptr->klnptr_from);
+
+			for(size_t i = 0; i < len; i++) {
+				NanTreeNode * ni = nan_tree_node_vector_get_item(tptr->klnptr_from, i);
+				assert(ni);
+
+				nan_inode_to_code(ni, true);
 			}
 		}
 	}
@@ -415,7 +419,7 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 		 * ch will not be NLEX_CASE_LIST in that case.
 		 */
 		// TODO FIXME why does nan_treenode_set_charlist() fail?
-		newnode->ptr         = chlist;
+		newnode->data.chlist = chlist;
 
 		nan_tree_node_append_child(tcurnode, newnode);
 
@@ -511,10 +515,10 @@ void nan_tree_simplify(NanTreeNode * root)
 			bool can_merge =
 				chld->sibling &&
 				(chld->klnptr == NULL) &&
-				(chld->klnptr_from_len <= 0) &&
+				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->klnptr_from) <= 0) &&
 				(nan_treenode_has_action(chld) == false) &&
 				(chld->sibling->klnptr == NULL) &&
-				(chld->sibling->klnptr_from_len <= 0) &&
+				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->sibling->klnptr_from) <= 0) &&
 				(nan_treenode_has_action(chld->sibling) == false);
 			
 			/* Yes, chld->sibling might get checked again in the next iteration;

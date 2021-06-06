@@ -1,6 +1,6 @@
 CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
 DEBUGFLAGS=-DDEBUG -g
-OBJS=error.o plot.o main.o read.o tree.o
+OBJS=error.o plot.o main.o read.o tree.o tree_types.o
 
 # Use `make clean; make debug=1` to turn on the debug mode.
 ifdef debug
@@ -20,10 +20,15 @@ error.h: errmap.tsv error.h.top
 	awk -F "\t" '{print "extern const char * "$$1";"}' errmap.tsv >> error.h
 	echo '#endif' >> error.h
 
+tree_types.h: tree_types.c
+
+tree_types.c: tree_types.ngg
+	ngg -oh tree_types.h -oc tree_types.c --c-include-guard _N96E_LEX_TREE_TYPES_H tree_types.ngg
+
 types.h: types.ngg
 	ngg -oh types.h -oc /dev/null --c-include-guard _N96E_LEX_TYPES_H types.ngg
 
-%.o: %.c *.h types.h error.h
+%.o: %.c *.h tree_types.h types.h error.h
 	cc $(CFLAGS) -c $<
 
 nlexgen:$(OBJS)
