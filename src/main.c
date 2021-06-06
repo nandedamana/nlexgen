@@ -13,25 +13,34 @@
 
 int main(int argc, char * argv[])
 {
-	FILE *fpin = NULL;
+	FILE * fpin = stdin;
 	bool simplify = true;
-
-	size_t filearg = 1;
+	char * outpath_gv = NULL;
 
 	if(argc > 1) {
-		if(0 == strcmp(argv[1], "--no-simplify")) {
-			simplify = false;
-			filearg++;
-		}
-	}
+		size_t i = 0;
+	
+		while(++i < argc) {
+			if(0 == strcmp(argv[i], "--no-simplify")) {
+				simplify = false;
+			}
+			else if(0 == strcmp(argv[i], "--gv")) {
+				i++;
 
-	if(argc > filearg) {
-		fpin = fopen(argv[filearg], "r");
-		if(!fpin)
-			nlex_die("Error opening the input file.");
-	}
-	else {
-		fpin = stdin;
+				if(argc <= i)
+					nlex_die("No path given after --gv.");
+			
+				outpath_gv = argv[i];
+			}
+			else {
+				if(i != argc - 1)
+					nlex_die("Arguments given after the input file path.");
+
+				fpin = fopen(argv[i], "r");
+				if(!fpin)
+					nlex_die("Error opening the input file.");
+			}
+		}
 	}
 
 	NlexHandle *  nh;
@@ -60,21 +69,21 @@ int main(int argc, char * argv[])
 
 	/* BEGIN Code Generation */
 	
-	// TODO FIXME
-	//#define DEBUG 1
-	
-	#ifdef DEBUG
-		nan_tree_unvisit(&troot);
-		nan_plot(&troot);
-		fprintf(stderr, "tree dump complete.\n");
-	#endif
+	if(outpath_gv) {
+		FILE * fpo = fopen(outpath_gv, "w");
+		if(!fpo)
+			nlex_die("Error opening the input file.");
+
+		nan_plot(&troot, fpo);
+		fprintf(stderr, "tree dump complete.\n"); // TODO REM
+
+		fclose(fpo);
+	}
 
 // TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
 // NOTE: Commits made on or just before 2021-05-22 do
 // something similar. Check. I think splitting the loop would
 // be a further improvement.
-
-	// TODO why do I have both hiprio_act_this_iter and nh->last_accepted_state? Find and doc. Or did I introduce nh->last_accepted_state just keep record of it? If so, it's useless now that I reset to 0 for performance reasons.
 
 	fprintf(fpout,
 		"char ch = 0;\n"

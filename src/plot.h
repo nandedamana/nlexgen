@@ -12,20 +12,12 @@
 
 void nan_plot_rec(NanTreeNode * node, FILE * fp);
 
-static inline void nan_plot(NanTreeNode * root)
+static inline void nan_plot(NanTreeNode * root, FILE * fp)
 {
-	FILE * fp = fopen("/dev/shm/nlexgen.gv", "w");
-	if(!fp) {
-		perror(NULL);
-		exit(EXIT_FAILURE);
-	}
-
 	nan_tree_unvisit(root);
 
 	fprintf(fp, "digraph {\n");
 	nan_plot_rec(root, fp);
 	fprintf(fp, "}\n");
-	
-	fclose(fp);
 }
 
