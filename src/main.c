@@ -97,7 +97,6 @@ int main(int argc, char * argv[])
 		troot.id);
 	fprintf(fpout,
 		"while(!nlex_nstack_is_empty(nh)) {\n"
-		"nlex_nstack_fix_actions(nh);\n" // TODO FIXME update since I've moved the action nodes out of the stack
 		
 		// TODO why not just use nh->eof_read?
 		"if(nh->fp) {\n" /* Reading from file */
@@ -116,7 +115,7 @@ int main(int argc, char * argv[])
 		"nlex_nstack_dump(nh);\n"
 #endif
 		"nlex_swap_t_n_stacks(nh);\n"
-		"if(nlex_tstack_has_non_action_nodes(nh)) { ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++; }\n"
+		"if(!nlex_tstack_is_empty(nh)) { ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++; }\n"
 		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 		"while(!nlex_tstack_is_empty(nh)) {\n"
 		"assert(ch_set);\n"
