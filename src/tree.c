@@ -506,19 +506,24 @@ void nan_tree_simplify(NanTreeNode * root)
 	while(chld && chld->sibling) {
 		bool merged = false;
 	
+		bool chld_has_action    = nan_treenode_has_action(chld);
+		bool chldsib_has_action = nan_treenode_has_action(chld->sibling);
+
 		if(nan_tree_nodes_match(chld, chld->sibling)) {
+			if(chld_has_action && chldsib_has_action)
+				nlex_die("Input has duplicate rules."); // TODO useful info
+
 			/* Not because extra work is needed while merging;
 			 * rather, merging such a node will change the meaning.
 			 */
 			// TODO check: no actual problem merging nodes with act children?
 			bool can_merge =
-				chld->sibling &&
 				(chld->klnptr == NULL) &&
 				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->klnptr_from) <= 0) &&
-				(nan_treenode_has_action(chld) == false) &&
+				!chld_has_action &&
 				(chld->sibling->klnptr == NULL) &&
 				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->sibling->klnptr_from) <= 0) &&
-				(nan_treenode_has_action(chld->sibling) == false);
+				!chldsib_has_action;
 			
 			/* Yes, chld->sibling might get checked again in the next iteration;
 			 * not worrying about it now.
