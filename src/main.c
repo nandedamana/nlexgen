@@ -85,74 +85,91 @@ int main(int argc, char * argv[])
 // be a further improvement.
 
 	fprintf(fpout,
-		"char ch = 0;\n"
-		"_Bool ch_set = 0;\n"
-		"size_t ch_read_after_accept = 0;\n"
-		"int lastmatchat = -1;\n"
-		"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
-		"nh->curtoklen = 0;\n"
-		"nh->last_accepted_state = 0;\n"
-		"nlex_reset_states(nh);\n"
-		"nlex_nstack_push(nh, %d);\n",
-		troot.id);
+		"if(!nlex_end_of_input(nh)) {\n"
+			"char ch = 0;\n"
+			"_Bool ch_set = 0;\n"
+			"size_t ch_read_after_accept = 0;\n"
+			"int lastmatchat = -1;\n"
+			"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
+			"nh->curtoklen = 0;\n"
+			"nh->last_accepted_state = 0;\n"
+			"nlex_reset_states(nh);\n"
+			"nlex_nstack_push(nh, %d);\n",
+			troot.id);
 	fprintf(fpout,
-		"while(!nlex_nstack_is_empty(nh)) {\n"
-		
-		// TODO why not just use nh->eof_read?
-		"if(nh->fp) {\n" /* Reading from file */
-			"\tif(nh->buf && (nlex_last(nh) == 0))\n\t\tbreak;\n"
-		"}"
-		"else {\n"        /* Reading from string */
-			"\tif(nh->bufptr >= nh->buf && nlex_last(nh) == 0)\n\t\tbreak;\n"
-		"}"
+			"while(!nlex_nstack_is_empty(nh)) {\n");
+
 #ifdef NLXDEBUG
-		"if(nh->buf)"		
-		"\tfprintf(stderr, "
-		"\t\t\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
-		"else"
-		"\tfprintf(stderr, "
-		"\t\t\"nstack:\\n\");\n"
-		"nlex_nstack_dump(nh);\n"
+	fprintf(fpout,
+				"if(nh->buf)\n"
+					"fprintf(stderr, "
+						"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+				"else\n"
+					"fprintf(stderr, \"nstack:\\n\");\n"
+
+				"nlex_nstack_dump(nh);\n");
 #endif
-		"nlex_swap_t_n_stacks(nh);\n"
-		"if(!nlex_tstack_is_empty(nh)) { ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++; }\n"
-		"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
-		"while(!nlex_tstack_is_empty(nh)) {\n"
-		"assert(ch_set);\n"
-		"_Bool match = 0;\n"
-		"nh->curstate = nlex_tstack_pop(nh);\nif(nh->curstate == 0) continue;\n");
+
+	fprintf(fpout,
+				"nlex_swap_t_n_stacks(nh);\n"
+				"assert(nlex_nstack_is_empty(nh));\n"
+				"if(!nlex_tstack_is_empty(nh)) {\n"
+					"ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++;"
+				"}\n"
+				
+				/* We need to move on even if the input has ended (ch == 0 || ch == EOF)
+				 * since the stacks can have states that do not need any input (like
+				 * the states to select an action.
+				 */
+				
+				"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
+				"while(!nlex_tstack_is_empty(nh)) {\n"
+					"assert(ch_set);\n"
+					"_Bool match = 0;\n"
+					"nh->curstate = nlex_tstack_pop(nh);\n"
+					"if(nh->curstate == 0) continue;\n");
+
 #ifdef NLXDEBUG
-		fprintf(fpout,
-		"\tfprintf(stderr, "
-		"\t\t\"curstate = %%d\\n\", nh->curstate);\n");
+	fprintf(fpout,
+					"fprintf(stderr, \"curstate = %%d\\n\", nh->curstate);\n");
 #endif
+
 	nan_tree_unvisit(&troot);
 	nan_tree_istates_to_code(&troot, false);
-	fprintf(fpout, "if(match) lastmatchat = (nh->bufptr - nh->buf);\n");
-	fprintf(fpout, "}\n"
-		"if(hiprio_act_this_iter != UINT_MAX) { nh->last_accepted_state = hiprio_act_this_iter; } \n");
-	fprintf(fpout, "if(nh->eof_read) break;\n"); // TODO EOF checking done above too. Why twice?
-	fprintf(fpout, "}\n");
+	fprintf(fpout,
+					"if(match) lastmatchat = (nh->bufptr - nh->buf);\n"
+				"} /* end while tstack */\n"
+				"assert(nlex_tstack_is_empty(nh));\n"
+
+				"if(hiprio_act_this_iter != UINT_MAX) { nh->last_accepted_state = hiprio_act_this_iter; } \n"
+				// TODO REM
+				"//if(ch == EOF || ch == '\\0') { assert(nlex_nstack_is_empty(nh)); break; }\n" // TODO done above too. Why twice?
+			"} /* end while nstack */\n");
+
 #ifdef NLXDEBUG
 	fprintf(fpout,
-		"\tfprintf(stderr, "
-		"\t\t\"before anode comparison, nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
+			"fprintf(stderr, "
+				"\"before anode comparison, nh->last_accepted_state = %%d\\n\", nh->last_accepted_state);\n");
 #endif
+
 	nan_tree_unvisit(&troot);
 
-	fprintf(fpout, "if(nh->last_accepted_state != 0) {\n");
-	// TODO rem ch_read_after_accept if it'll always be 0
-	fprintf(fpout, "\tnh->curtoklen = lastmatchat - nh->curtokpos - ch_read_after_accept + 1; assert(nh->curtoklen > 0);\n");
-	fprintf(fpout, "switch(nh->last_accepted_state) {\n");
+	fprintf(fpout,
+			"if(nh->last_accepted_state != 0) {\n"
+				// TODO rem ch_read_after_accept if it'll always be 0
+				"nh->curtoklen = lastmatchat - nh->curtokpos - ch_read_after_accept + 1;\n"
+				"assert(nh->curtoklen > 0);\n"
+				"switch(nh->last_accepted_state) {\n");
 	nan_tree_astates_to_code(&troot);
-	fprintf(fpout, "}\n");
-	fprintf(fpout, "assert(nh->curtoklen > 0);\n");
+	fprintf(fpout,
+				"}\n");
 
 	fprintf(fpout,
-		"assert(nh->curtokpos >= 0);"
-		"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */\n");
-	fprintf(fpout, "}\n");
-
+				"assert(nh->curtoklen > 0);\n"
+				"assert(nh->curtokpos >= 0);\n"
+				"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */\n"
+			"} /* endif last_accepted_state */\n");
+	fprintf(fpout, "} /* endif not end of input */ \n");
 	/* END Code Generation */
 
 	return 0;

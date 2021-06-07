@@ -142,7 +142,7 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 	if(tptr->ch < 0) { /* Special cases */
 		if(-(tptr->ch) & NLEX_CASE_LIST) {
 			if(-(tptr->ch) & NLEX_CASE_INVERT)
-				fprintf(fpout, "!(");
+				fprintf(fpout, "ch != EOF && ch != '\\0' && !(");
 			else
 				fprintf(fpout, "(");
 			

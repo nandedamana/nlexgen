@@ -161,6 +161,14 @@ static inline char nlex_last(NlexHandle * nh)
 	return *(nh->bufptr);
 }
 
+static inline _Bool nlex_end_of_input(NlexHandle * nh)
+{
+	if(nh->fp)
+		return nh->eof_read;
+	else /* readin from string */
+		return (nh->bufptr != nh->buf - 1) && (nlex_last(nh) == 0);
+}
+
 static inline _Bool nlex_nstack_is_empty(NlexHandle * nh)
 {
 	return (nh->nstack_top == 0);
@@ -207,7 +215,7 @@ static inline void nlex_nstack_remove(NlexHandle * nh, NanTreeNodeId id)
 
 /* Behaviour:
  * On EOF, sets nh->eof_read to 1, appends the buf with nullchar, and returns EOF.
- * Subsequent calls to nlex_last(nh) will return 0 and nlex_next() will return EOF.
+ * Subsequent calls to nlex_last(nh) will return 0 and nlex_next() will fail.
  * on_next callback is not called for EOF (even for the first time).
  */
 static inline int nlex_next(NlexHandle * nh)
@@ -215,8 +223,7 @@ static inline int nlex_next(NlexHandle * nh)
 	_Bool  eof_read = 0;
 	size_t bytes_read;
 
-	if(nh->eof_read)
-		return EOF;
+	assert(!nh->eof_read);
 
 	nh->bufptr++;
 
