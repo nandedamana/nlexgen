@@ -2,6 +2,11 @@ CFLAGS=-Wall -std=c99 -DNLEX_ITSELF
 DEBUGFLAGS=-DDEBUG -g
 OBJS=error.o plot.o main.o read.o tree.o tree_types.o
 
+ifdef nlxdebug
+	debug = 1
+  CFLAGS += -D NLXDEBUG
+endif
+
 # Use `make clean; make debug=1` to turn on the debug mode.
 ifdef debug
   CFLAGS += $(DEBUGFLAGS)
