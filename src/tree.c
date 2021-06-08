@@ -518,10 +518,10 @@ void nan_tree_simplify(NanTreeNode * root)
 			 */
 			bool can_merge =
 				(chld->klnptr == NULL) &&
-				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->klnptr_from) <= 0) &&
+				(!chld->klnptr_from || nan_tree_node_vector_get_count(chld->klnptr_from) <= 0) &&
 				!chld_has_action &&
 				(chld->sibling->klnptr == NULL) &&
-				(chld->klnptr_from && nan_tree_node_vector_get_count(chld->sibling->klnptr_from) <= 0) &&
+				(!chld->klnptr_from || nan_tree_node_vector_get_count(chld->sibling->klnptr_from) <= 0) &&
 				!chldsib_has_action;
 			
 			/* Yes, chld->sibling might get checked again in the next iteration;
