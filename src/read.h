@@ -100,6 +100,16 @@ static inline char *
 	nlex_tokdup(NlexHandle * nh, size_t offset, size_t rtrimlen)
 {
 	assert(nh->curtoklen > 0);
+
+	if( rtrimlen >= nh->curtoklen ||
+	    offset >= (nh->curtoklen - rtrimlen) )
+	{
+		char * newbuf = nlex_malloc(nh, 1);
+		newbuf[0] = '\0';
+
+		return newbuf;
+	}
+
 	return nlex_bufdup(nh,
 		nh->curtokpos + offset,
 		nh->curtoklen - offset - rtrimlen);
