@@ -260,7 +260,7 @@ static inline int nlex_next(NlexHandle * nh)
 				nh->on_error(nh, NLEX_ERR_READING);
 		}
 
-		/* Really important. The feof() chech at the top fails to detect the end if the file size is a multiple of buf_alloc_unit and the previous read had consumed the last block, leaving nothing for this call to read. */
+		/* Really important. The feof() check at the top fails to detect the end if the file size is a multiple of buf_alloc_unit and the previous read had consumed the last block, leaving nothing for this call to read. */
 		if(bytes_read == 0) {
 			eof_read   = 1;
 			bytes_read = 1; /* To fill with nullchar */
