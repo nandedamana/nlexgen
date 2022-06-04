@@ -24,7 +24,7 @@ alias for uint NanTreeNodeId;
 // TODO rem once the above code produced typedef
 vh typedef unsigned int NanTreeNodeId;
 
-shadow function NlexErrCallback     takes nh NlexHandle, errno NlexErr;
+shadow function NlexErrCallback     takes nh NlexHandle, err NlexErr;
 shadow function NlexConsumeCallback takes nh NlexHandle, offset size, len size;
 
 class NlexHandle
