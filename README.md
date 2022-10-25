@@ -1,7 +1,7 @@
 # nlexgen
 
-nlexgen is a a lexer generator.
+nlexgen is a lexer generator.
 
 ## Copyright
 
-Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+Copyright (C) 2019-2022 Nandakumar Edamana
