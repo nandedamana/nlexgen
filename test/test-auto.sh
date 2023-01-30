@@ -3,8 +3,9 @@
 # File started on 2021-01-30, copying the version started in 2020 for nguigen.
 
 set -e
+set -o nounset
 
-if [ -z "$1" ]; then
+if [ -z "${1-}" ]; then
 	>&2 echo "Usage: $0 NLXFILE"
 	exit 1
 fi

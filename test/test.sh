@@ -2,11 +2,13 @@
 # Nandakumar Edamana
 # File started on 2021-01-30, copying the version started in 2020 for nguigen.
 
-if [ "$1" = '-e' ]; then
+set -o nounset
+
+if [ "${1-}" = '-e' ]; then
 	dieonerr=1
 fi
 
-if [ "$dieonerr" ]; then
+if [ "${dieonerr-}" ]; then
 	set -e
 fi
 
@@ -34,7 +36,7 @@ while read t; do
 	echo "$t"
 	echo '===='
 
-	if [ "$usemake" ]; then
+	if [ "${usemake-}" ]; then
 		make -C "$t" clean
 		timeout 10s make -C "$t"
 	else
