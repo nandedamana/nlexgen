@@ -5,7 +5,7 @@
 set -e
 
 if [ -z "$1" ]; then
-	echo "Usage: $0 NLXFILE"
+	>&2 echo "Usage: $0 NLXFILE"
 	exit 1
 fi
 
@@ -15,7 +15,20 @@ nlxfile="$1"
 ocfile="$1.nlexout.c"
 mcfile="$1.main.c"
 elffile="$1.elf"
-tstfile="$1.test"
+
+tstfile=''
+
+ECHOARGS=''
+
+if [ -f "$1.test" ]; then
+	tstfile="$1.test"
+elif [ -f "$1.test-bashesc" ]; then
+	tstfile="$1.test-bashesc"
+	ECHOARGS='-e '
+else
+	>&2 echo 'error: test file not found.'
+	exit 1
+fi
 
 echo '#include <assert.h>' > "$ocfile"
 echo '#include <read.h>' >> "$ocfile"
@@ -30,11 +43,12 @@ rsync "$scriptdir"'/main-for-auto.c' "$mcfile"
 cc -o "$elffile" -g "$mcfile" "$ocfile" "$(dirname "$0")"/../src/read.o -I"$(dirname "$0")"/../src
 
 while IFS= read -r line; do
+echo "$line"
 	inp="$(echo "$line"|cut -f 1)"
 	exp="$(echo "$line"|cut -f 2)"
 
 	echo "INPUT $inp"
-	test "$(echo -n "$inp"|timeout 1s "$elffile")" = "$exp"
+	test "$(echo $ECHOARGS-n "$inp"|timeout 1s "$elffile")" = "$exp"
 	echo "$exp"
 	echo ''
 done < "$tstfile"
