@@ -48,6 +48,9 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 			fprintf(fp, "[label=\"%u: '%c'\"]", nan_tree_node_id(node), node->ch);
 		}
 	}
+	else if(node->ch > 0) {
+			fprintf(fp, "[label=\"%u: %d\"]", nan_tree_node_id(node), node->ch);
+	}
 	else {
 		fprintf(fp, "[label=\"%u: %d", nan_tree_node_id(node), node->ch);
 		
@@ -57,6 +60,7 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 		
 		if( (node->ch < 0) && (-(node->ch) & NLEX_CASE_LIST) ) {
 			fprintf(fp, "\n");
+			// TODO escape non-isprint chars
 			nan_character_list_to_expr(
 				nan_treenode_get_charlist(node), "ch", fp);
 		}
