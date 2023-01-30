@@ -1,0 +1,7 @@
+ab\\\n	ABX-
+abcde	AB-CDE-
+cde	CDE-
+abcdeab\\\ncde	AB-CDE-ABX-CDE-
+ababab\\\ncde	ABX-CDE-
+cdeabababcde	CDE-AB-CDE-
+cdeababab\\\ncde	CDE-ABX-CDE-

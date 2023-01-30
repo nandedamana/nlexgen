@@ -1,0 +1,3 @@
+[ab]+\\\n printf("ABX-");
+[ab]+  printf("AB-");
+cde    printf("CDE-");
