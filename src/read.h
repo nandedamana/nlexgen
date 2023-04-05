@@ -197,13 +197,23 @@ static inline void nlex_nstack_dump(NlexHandle * nh)
 }
 
 /* Call after setting nh->nstack_top but before the actual push */
-static inline void nlex_nstack_resize_if_needed(NlexHandle * nh)
+static inline void nlex_nstack_downsize_if_needed(NlexHandle * nh)
 {
+	#ifdef NLEX_STATESTACK_NO_DOWNSIZE
+	return;
+	#endif
+
 	if(nh->nstack_top >= nh->nstack_allocsiz) {
 		nh->nstack_allocsiz += NLEX_STATESTACK_ALLOC_UNIT;
 		nh->nstack =
 			nlex_realloc(nh, nh->nstack, sizeof(NanTreeNodeId) * nh->nstack_allocsiz);
 	}
+}
+
+/* Kept for backward compatibility */
+static inline void nlex_nstack_resize_if_needed(NlexHandle * nh)
+{
+	nlex_nstack_downsize_if_needed(nh);
 }
 
 static inline void nlex_nstack_push(NlexHandle * nh, NanTreeNodeId id)
@@ -356,13 +366,23 @@ static inline _Bool nlex_tstack_is_empty(NlexHandle * nh)
 }
 
 /* Call after popping and setting nh->tstack_top */
-static inline void nlex_tstack_resize_if_needed(NlexHandle * nh)
+static inline void nlex_tstack_downsize_if_needed(NlexHandle * nh)
 {
+	#ifdef NLEX_STATESTACK_NO_DOWNSIZE
+	return;
+	#endif
+
 	if( (nh->tstack_allocsiz - nh->tstack_top) > NLEX_STATESTACK_ALLOC_UNIT ) {
 		nh->tstack_allocsiz -= NLEX_STATESTACK_ALLOC_UNIT;
 		nh->tstack =
 			nlex_realloc(nh, nh->tstack, sizeof(NanTreeNodeId) * nh->tstack_allocsiz);
 	}
+}
+
+/* Kept for backward compatibility */
+static inline void nlex_tstack_resize_if_needed(NlexHandle * nh)
+{
+	nlex_tstack_downsize_if_needed(nh);
 }
 
 static inline size_t nlex_tstack_pop(NlexHandle * nh)
