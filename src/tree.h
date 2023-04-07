@@ -239,8 +239,15 @@ static inline void
 	nan_treenode_set_klnptr(node, klnptr);
 }
 
+typedef struct Jmptab {
+	char ** arr;
+	size_t len;
+} Jmptab;
+
 /* Conversion of intermediate nodes */
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed);
+void nan_tree_istates_to_code_jmp(NanTreeNode * root);
+Jmptab nan_tree_istates_to_code_mkjmptab(NanTreeNode * root);
 
 /* TODO FIXME This comparison is order-sensitive for lists. */
 /* TODO what if one node is single character and the other is a single-element list? */

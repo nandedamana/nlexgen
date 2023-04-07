@@ -15,10 +15,15 @@ typedef struct NlexNString {
 } NlexNString;
 
 typedef unsigned int NanTreeNodeId;
+typedef struct NlexHandle NlexHandle;
+typedef struct _ngg_vtab_t_NlexHandle {
+} _ngg_vtab_t_NlexHandle;
+
 typedef struct NlexHandle {
+	_ngg_vtab_t_NlexHandle _ngg_vtab_nlex_handle;
 	size_t buf_alloc_unit;
-	void (*on_error)(struct NlexHandle *nh, NlexErr err);
-	void (*on_consume)(struct NlexHandle *nh, size_t offset, size_t len);
+	void (*on_error)(NlexHandle *nh, NlexErr err);
+	void (*on_consume)(NlexHandle *nh, size_t offset, size_t len);
 	void * userdata;
 	FILE * fp;
 	char * buf;

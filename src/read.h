@@ -1,6 +1,6 @@
 /* read.h
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -38,6 +38,18 @@ extern const NlexCharacter escout[];
 /* Escape sequence mapping for C output */
 extern const NlexCharacter escin_c [];
 extern const NlexCharacter escout_c[];
+
+static inline void * nlex_calloc_internal(size_t nmemb, size_t size)
+{
+	void * newptr;
+	
+	newptr = calloc(nmemb, size);
+	if(!newptr) {
+		nlex_die("calloc() error.");
+	}
+	
+	return newptr;
+}
 
 /* Sets errno and calls the error handling function on error */
 static inline void * nlex_malloc(NlexHandle * nh, size_t size)
@@ -197,23 +209,13 @@ static inline void nlex_nstack_dump(NlexHandle * nh)
 }
 
 /* Call after setting nh->nstack_top but before the actual push */
-static inline void nlex_nstack_downsize_if_needed(NlexHandle * nh)
+static inline void nlex_nstack_resize_if_needed(NlexHandle * nh)
 {
-	#ifdef NLEX_STATESTACK_NO_DOWNSIZE
-	return;
-	#endif
-
 	if(nh->nstack_top >= nh->nstack_allocsiz) {
 		nh->nstack_allocsiz += NLEX_STATESTACK_ALLOC_UNIT;
 		nh->nstack =
 			nlex_realloc(nh, nh->nstack, sizeof(NanTreeNodeId) * nh->nstack_allocsiz);
 	}
-}
-
-/* Kept for backward compatibility */
-static inline void nlex_nstack_resize_if_needed(NlexHandle * nh)
-{
-	nlex_nstack_downsize_if_needed(nh);
 }
 
 static inline void nlex_nstack_push(NlexHandle * nh, NanTreeNodeId id)

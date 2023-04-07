@@ -79,6 +79,30 @@ int main(int argc, char * argv[])
 		fclose(fpo);
 	}
 
+	// XXX Implemented and tested on 2023-04-07; no performance gain because:
+	// 1) The current implementation was already using nested ifs to reduce comparison
+	// 2) Since label-as-value works only in the local scope, it's impossible to
+	//    put the table as a global constant, resulting in init every time (memcpy)
+	//int USE_JMPTAB = 1;
+	int USE_JMPTAB = 0;
+
+	// Can't move out of the fun to global scope because only local
+	// addresses can be taken.
+	if(USE_JMPTAB) {
+		nan_tree_unvisit(&troot);
+		Jmptab jmptabinfo = nan_tree_istates_to_code_mkjmptab(&troot);
+		char ** jmptab = jmptabinfo.arr;
+		size_t jmptabsiz = jmptabinfo.len;
+		fprintf(fpout, "void * jmptab[%zu] = { ", jmptabsiz);
+		for(size_t i = 0; i < jmptabsiz; i++)
+			fprintf(fpout, "%s, ", jmptab[i]? jmptab[i]: "NULL");
+		fprintf(fpout, "};\n");
+
+		for(size_t i = 0; i < jmptabsiz; i++)
+			free(jmptab[i]);
+		free(jmptab);
+	}
+
 // TODO FIXME action nodes should not be expanded into the same loop where regular states are compared. Put them outside the scanner loop so that less comparisons are made.
 // NOTE: Commits made on or just before 2021-05-22 do
 // something similar. Check. I think splitting the loop would
@@ -135,7 +159,18 @@ int main(int argc, char * argv[])
 #endif
 
 	nan_tree_unvisit(&troot);
-	nan_tree_istates_to_code(&troot, false);
+	
+	if(!USE_JMPTAB) {
+		nan_tree_istates_to_code(&troot, false);
+	}
+	else {
+		fprintf(fpout, "assert(jmptab[nh->curstate]);\n"); // TODO REM or make debug-only
+		fprintf(fpout, "goto *(jmptab[nh->curstate]);\n");
+
+		nan_tree_istates_to_code_jmp(&troot);
+		fprintf(fpout, "endjmp:\n");
+	}
+	
 	fprintf(fpout,
 					"if(match) lastmatchat = (nh->bufptr - nh->buf);\n"
 				"} /* end while tstack */\n"

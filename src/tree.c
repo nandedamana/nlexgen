@@ -1,6 +1,6 @@
 /* tree.c
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
  * File started on 2020-11-28, contains old code.
  */
 
@@ -461,6 +461,7 @@ nextiter:
  * This was to make the longest rule preferable (on collision), IIRC.
  * TODO do more research.
  */
+/* Compared to the jump table variant, the output of this fun is structured and (arguably) easier to debug. */
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 {
 	NanTreeNode * tptr = NULL;
@@ -489,6 +490,64 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 		fprintf(fpout, "}\n");
 
 	return;
+}
+
+/* XXX The resulting code will go through an extra step to reach
+ * the action node.
+ * This was to make the longest rule preferable (on collision), IIRC.
+ * TODO do more research.
+ */
+void nan_tree_istates_to_code_jmp(NanTreeNode * root)
+{
+	NanTreeNode * tptr = NULL;
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
+
+	fputs("goto endjmp;\n", fpout);
+
+	fprintf(fpout, "jmp_%u:\n", nan_tree_node_id(root));
+	nan_inode_to_code(root, false);
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_istates_to_code_jmp(tptr);
+
+	return;
+}
+
+void nan_tree_istates_to_code_mkjmptab_rec(NanTreeNode * root, char ** jmptbl, size_t tablen)
+{
+	NanTreeNode * tptr = NULL;
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
+
+	char * lbl = nlex_malloc(NULL, 32); // TODO FIXME size
+	if(snprintf(lbl, 32, "&&jmp_%u", nan_tree_node_id(root)) >= 32)
+		nlex_die("insufficient allocation.");
+
+	assert(nan_tree_node_id(root) < tablen);
+	jmptbl[nan_tree_node_id(root)] = lbl;
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_istates_to_code_mkjmptab_rec(tptr, jmptbl, tablen);
+
+	return;
+}
+
+Jmptab nan_tree_istates_to_code_mkjmptab(NanTreeNode * root)
+{
+	size_t tablen = (treebuild_id_lastnonact * 2) + 1;
+
+	char ** jmptbl = nlex_calloc_internal(tablen, sizeof(char *));
+
+	nan_tree_istates_to_code_mkjmptab_rec(root, jmptbl, tablen);
+	
+	return (Jmptab){ jmptbl, tablen };
 }
 
 void nan_tree_simplify(NanTreeNode * root)
