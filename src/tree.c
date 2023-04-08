@@ -13,11 +13,40 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
+/* Assuming the siblings are sorted/grouped; check the code before 2023-04-08
+ * to see how it's handled otherwise.
+ */
+bool can_use_else(NanTreeNode * prvsib)
+{
+	if(!prvsib)
+		return false;
+
+	/* If Node A has a sibling that represents a list containing
+	 * the character dealt by Node A, use of `else` will cause a miss.
+	 * Some special siblings might not be actually overlapping,
+	 * but checking that is an overkill.
+	 */
+	if(prvsib->sibling->ch < 0 && prvsib->sibling->ch != NLEX_CASE_ACT)
+		return false;
+
+	/* Non-special siblings might share the same character in
+	 * some cases (see tests-auto/subx-001.nlx and
+	 * tests-auto/kleene-004.nlx).
+	 * Happens due to how actions and priorities are handled. Remove the following
+	 * if that changes.
+	 */
+	/* TODO in this case, instead of opening a fresh `if`, I should merge the
+	 * branches.
+	 */
+	if(prvsib->ch >= 0 && prvsib->ch == prvsib->sibling->ch)
+		return false;
+
+	return true;
+}
+
 void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 {
 	NanTreeNode * tptr = NULL;
-	NanTreeNode * itptr = NULL;
-	NanTreeNode * jtptr = NULL;
 
 	if(pseudonode) {
 		if(node->klnptr)
@@ -34,42 +63,6 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 	}
 
 	nan_inode_to_code_kleene_skipping(node);
-
-	/* If Node A has a sibling that represents a list containing
-	 * the character dealt by Node A, use of `else` will cause a miss.
-	 * Some special siblings might not be actually overlapping,
-	 * but checking that is an overkill.
-	 */
-	bool can_use_else = true;
-	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
-		if(tptr->ch < 0 && tptr->ch != NLEX_CASE_ACT) {
-			can_use_else = false;
-			break;
-		}
-	}
-	
-	/* Non-special siblings might share the same character in
-	 * some cases (see tests-auto/subx-001.nlx and
-	 * tests-auto/kleene-004.nlx).
-	 * TODO should that happen? remove the following if that
-	 * changes.
-	 */
-	if(can_use_else) {
-		for(itptr = node->first_child; itptr; itptr = itptr->sibling) {
-			for(jtptr = node->first_child; jtptr; jtptr = jtptr->sibling) {
-				if(itptr == jtptr)
-					continue;
-				
-				if(itptr->ch < 0)
-					continue;
-
-				if(itptr->ch == jtptr->ch) {
-					can_use_else = false;
-					break;
-				}
-			}
-		}
-	}
 
 	size_t actcount = 0;
 	for(tptr = node->first_child; tptr; tptr = tptr->sibling)
@@ -106,15 +99,17 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 
 	_Bool if_printed = 0;
 
+	NanTreeNode * sibbak = NULL;
+
 	/* Non-action nodes */
-	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
+	for(tptr = node->first_child; tptr; sibbak = tptr, tptr = tptr->sibling) {
 		if(tptr->ch == NLEX_CASE_ACT)
 			continue;
 			
 		if(nan_treenode_is_klndst(tptr))
 			continue;
 
-		if(can_use_else) {
+		if(can_use_else(sibbak)) {
 			if(if_printed)
 				fprintf(fpout, "else ");
 			else
@@ -594,9 +589,49 @@ void nan_tree_number(NanTreeNode * root)
 		nan_tree_number(chld);
 }
 
+// Move futuresib to the slot before the current sibling (node->sibling)
+void nan_tree_move(NanTreeNode * node, NanTreeNode * futuresib, NanTreeNode * futuresib_prvsib)
+{
+	assert(futuresib_prvsib->sibling == futuresib);
+	assert(futuresib != node);
+	assert(futuresib != node->sibling);
+	assert(futuresib_prvsib != node);
+
+	NanTreeNode * cursib = node->sibling;
+	NanTreeNode * futuresib_sibbak = futuresib->sibling;
+
+	node->sibling = futuresib;
+	futuresib->sibling = cursib;
+	futuresib_prvsib->sibling = futuresib_sibbak;
+}
+
+void nan_tree_node_defrag_children(NanTreeNode * root) {
+	NanTreeNode * chld_sorted = root->first_child;
+
+	while(chld_sorted && chld_sorted->sibling) {
+		if(nan_tree_nodes_match(chld_sorted, chld_sorted->sibling)) {
+			assert(chld_sorted != chld_sorted->sibling);
+			chld_sorted = chld_sorted->sibling;
+			continue;
+		}
+	
+		NanTreeNode * sib2_prv = chld_sorted->sibling;
+		NanTreeNode * sib2;
+		for(sib2 = sib2_prv->sibling; sib2; sib2_prv = sib2, sib2 = sib2->sibling) {
+			if(nan_tree_nodes_match(chld_sorted, sib2)) {
+				// Swap chld_sorted->sibling with sib2
+				nan_tree_move(chld_sorted, sib2, sib2_prv);
+				break;
+			}
+		}
+
+		assert(chld_sorted != chld_sorted->sibling);
+		chld_sorted = chld_sorted->sibling;
+	}
+}
+
 void nan_tree_simplify(NanTreeNode * root)
 {
-
 	if(root->visited)
 		return;
 	else
@@ -604,29 +639,9 @@ void nan_tree_simplify(NanTreeNode * root)
 
 	NanTreeNode * chld = NULL;
 
-	/* defrag (group) siblings; won't mess with priorities at this point since
-	 * numbering has been done.
+	/* Won't mess with priorities at this point since numbering has been done.
 	 */
-	NanTreeNode * chld_sorted = root->first_child;
-	while(chld_sorted) {
-		chld = chld_sorted;
-		while(chld && chld->sibling && chld->sibling->sibling) {
-			if( !nan_tree_nodes_match(chld, chld->sibling) &&
-					 nan_tree_nodes_match(chld, chld->sibling->sibling) )
-			{
-				NanTreeNode * sib1 = chld->sibling;
-				NanTreeNode * sib2 = chld->sibling->sibling;
-
-				chld->sibling = sib2;
-				sib1->sibling = sib2->sibling;
-				sib2->sibling = sib1;
-			}
-			
-			chld = chld->sibling;
-		}
-
-		chld_sorted = chld_sorted->sibling;
-	}
+	nan_tree_node_defrag_children(root);
 
 	/* Merge adjacent siblings with the same content */
 	chld = root->first_child;
@@ -669,12 +684,18 @@ void nan_tree_simplify(NanTreeNode * root)
 			chld = chld->sibling;
 	}
 
-	/* Sort to facilitate nasting while branch generation */
-	/* TODO not needed when use_jmptab is on */
-	chld_sorted = root->first_child;
+	for(chld = root->first_child; chld; chld = chld->sibling)
+		nan_tree_simplify(chld);
+}
+
+// TODO rem if unused
+/*
+void nan_tree_node_sort_children(NanTreeNode * root) {
+	NanTreeNode * chld_sorted = root->first_child;
 	while(chld_sorted) {
 		NanTreeNode * futuresib = chld_sorted->sibling;
 		NanTreeNode * futuresib_prvsib = NULL;
+		NanTreeNode * chld;
 		for(chld = futuresib; chld; chld = chld->sibling) {
 			if(nan_tree_node_id(chld) < nan_tree_node_id(futuresib))
 				futuresib = chld;
@@ -683,7 +704,7 @@ void nan_tree_simplify(NanTreeNode * root)
 		}
 
 		if(futuresib != chld_sorted->sibling) {
-			/* Swap futuresib and the current sibling (chld_sorted->sibling) */
+			// Swap futuresib and the current sibling (chld_sorted->sibling)
 		
 			NanTreeNode * cursib = chld_sorted->sibling;
 			NanTreeNode * cursib_sibling = cursib->sibling;
@@ -696,7 +717,5 @@ void nan_tree_simplify(NanTreeNode * root)
 
 		chld_sorted = futuresib;
 	}
-
-	for(chld = root->first_child; chld; chld = chld->sibling)
-		nan_tree_simplify(chld);
 }
+*/
