@@ -155,8 +155,6 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 
 	fprintf(fpout, " ) {\n");
 
-	fprintf(fpout, "\tmatch = 1;\n");
-
 	/* Push itself onto the next-stack */
 	fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
 

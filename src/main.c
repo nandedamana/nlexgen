@@ -158,7 +158,7 @@ int main(int argc, char * argv[])
 				"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
 				"while(!nlex_tstack_is_empty(nh)) {\n"
 					"assert(ch_set);\n"
-					"_Bool match = 0;\n"
+					"size_t nstack_top_bak = nh->nstack_top;\n"
 					"nh->curstate = nlex_tstack_pop(nh);\n"
 					"if(nh->curstate == 0) continue;\n");
 
@@ -184,7 +184,7 @@ int main(int argc, char * argv[])
 	}
 	
 	fprintf(fpout,
-					"if(match) lastmatchat = (nh->bufptr - nh->buf);\n"
+					"if(nh->nstack_top != nstack_top_bak) lastmatchat = (nh->bufptr - nh->buf);\n"
 				"} /* end while tstack */\n"
 				"assert(nlex_tstack_is_empty(nh));\n"
 
