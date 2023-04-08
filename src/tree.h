@@ -248,6 +248,7 @@ typedef struct Jmptab {
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed);
 void nan_tree_istates_to_code_jmp(NanTreeNode * root);
 Jmptab nan_tree_istates_to_code_mkjmptab(NanTreeNode * root);
+void nan_tree_istates_to_code_switch(NanTreeNode * root);
 
 /* TODO FIXME This comparison is order-sensitive for lists. */
 /* TODO what if one node is single character and the other is a single-element list? */
@@ -409,6 +410,7 @@ static inline void nan_merge_adjacent_siblings(NanTreeNode * node1, NanTreeNode 
 	nan_merge_treenodes(node1, node2);
 }
 
+void nan_tree_number(NanTreeNode * root);
 void nan_tree_simplify(NanTreeNode * root);
 
 static inline bool nan_treenode_has_action(NanTreeNode * root)

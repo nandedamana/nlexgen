@@ -1,6 +1,6 @@
 /* main.c
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -16,6 +16,17 @@ int main(int argc, char * argv[])
 	FILE * fpin = stdin;
 	bool simplify = true;
 	char * outpath_gv = NULL;
+	
+	// XXX Implemented and tested on 2023-04-07; no performance gain because:
+	// 1) The current implementation was already using nested ifs to reduce comparison
+	// 2) Since label-as-value works only in the local scope, it's impossible to
+	//    put the table as a global constant, resulting in init every time (memcpy)
+	// 3) The table is large, just to allocate NULLs that are the result of action
+	//    nodes which are not to be considered?
+	//    - NOTE: additionally, when the tree is simplified, the count of nodes
+	//            decreases, but the numbering is kept to preserve priorities.
+	//            (TODO do tree renumbering preserving the order)
+	bool use_jmptab = false;
 
 	if(argc > 1) {
 		size_t i = 0;
@@ -32,9 +43,12 @@ int main(int argc, char * argv[])
 			
 				outpath_gv = argv[i];
 			}
+			else if(0 == strcmp(argv[i], "--x-use-jump-table")) {
+				use_jmptab = true;
+			}
 			else {
 				if(i != argc - 1)
-					nlex_die("Arguments given after the input file path.");
+					nlex_die("Options given after the input file path.");
 
 				fpin = fopen(argv[i], "r");
 				if(!fpin)
@@ -55,8 +69,10 @@ int main(int argc, char * argv[])
 	if(err != NLEXERR_SUCCESS)
 		nlex_die(err);
 
-	if(simplify)
+	if(simplify) {
+		nan_tree_number(&troot); // do it first to preserve priorities
 		nan_tree_simplify(&troot);
+	}
 
 	nan_tree_unvisit(&troot);
 	// TODO FIXME currently both this fun and other funs use nan_tree_node_id(), which sets the id if not set already. split it as getter and setter. Only this fun should use the setter.
@@ -79,16 +95,9 @@ int main(int argc, char * argv[])
 		fclose(fpo);
 	}
 
-	// XXX Implemented and tested on 2023-04-07; no performance gain because:
-	// 1) The current implementation was already using nested ifs to reduce comparison
-	// 2) Since label-as-value works only in the local scope, it's impossible to
-	//    put the table as a global constant, resulting in init every time (memcpy)
-	//int USE_JMPTAB = 1;
-	int USE_JMPTAB = 0;
-
 	// Can't move out of the fun to global scope because only local
 	// addresses can be taken.
-	if(USE_JMPTAB) {
+	if(use_jmptab) {
 		nan_tree_unvisit(&troot);
 		Jmptab jmptabinfo = nan_tree_istates_to_code_mkjmptab(&troot);
 		char ** jmptab = jmptabinfo.arr;
@@ -160,8 +169,11 @@ int main(int argc, char * argv[])
 
 	nan_tree_unvisit(&troot);
 	
-	if(!USE_JMPTAB) {
-		nan_tree_istates_to_code(&troot, false);
+	if(!use_jmptab) {
+		//nan_tree_istates_to_code(&troot, false);
+		fprintf(fpout, "switch(nh->curstate) {\n");
+		nan_tree_istates_to_code_switch(&troot);
+		fprintf(fpout, "}\n");
 	}
 	else {
 		fprintf(fpout, "assert(jmptab[nh->curstate]);\n"); // TODO REM or make debug-only

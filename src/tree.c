@@ -461,7 +461,11 @@ nextiter:
  * This was to make the longest rule preferable (on collision), IIRC.
  * TODO do more research.
  */
+/* XXX Although tests pass, doesn't work after the introduction of defrag
+ * and soring in nan_tree_simplify(). Switch is faster anyway.
+ */
 /* Compared to the jump table variant, the output of this fun is structured and (arguably) easier to debug. */
+/*
 void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 {
 	NanTreeNode * tptr = NULL;
@@ -476,8 +480,13 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 	if(if_printed)
 		fprintf(fpout, "else ");
 
-	if(root->sibling)
+	if(root->sibling) {
+		// happened once while defrag and merge (tree simplification)
+		assert(nan_tree_node_id(root) < nan_tree_node_id(root->sibling));
+
+		// Nested branching for efficiency (like binary search)
 		fprintf(fpout, "if(nh->curstate >= %u && nh->curstate < %u) {", nan_tree_node_id(root), nan_tree_node_id(root->sibling));
+	}
 
 	fprintf(fpout, "if(nh->curstate == %u) {", nan_tree_node_id(root));
 	nan_inode_to_code(root, false);
@@ -491,6 +500,7 @@ void nan_tree_istates_to_code(NanTreeNode * root, bool if_printed)
 
 	return;
 }
+*/
 
 /* XXX The resulting code will go through an extra step to reach
  * the action node.
@@ -550,6 +560,40 @@ Jmptab nan_tree_istates_to_code_mkjmptab(NanTreeNode * root)
 	return (Jmptab){ jmptbl, tablen };
 }
 
+/* XXX The resulting code will go through an extra step to reach
+ * the action node.
+ * This was to make the longest rule preferable (on collision), IIRC.
+ * TODO do more research.
+ */
+void nan_tree_istates_to_code_switch(NanTreeNode * root)
+{
+	NanTreeNode * tptr = NULL;
+
+	if(root->visited)
+		return;
+	else
+		root->visited = true;
+
+	fprintf(fpout, "case %u: {\n", nan_tree_node_id(root));
+	nan_inode_to_code(root, false);
+	fputs("break; }\n", fpout);
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
+		nan_tree_istates_to_code_switch(tptr);
+
+	return;
+}
+
+void nan_tree_number(NanTreeNode * root)
+{
+	nan_tree_node_id(root);
+
+	NanTreeNode * chld = NULL;
+
+	for(chld = root->first_child; chld; chld = chld->sibling)
+		nan_tree_number(chld);
+}
+
 void nan_tree_simplify(NanTreeNode * root)
 {
 
@@ -559,6 +603,30 @@ void nan_tree_simplify(NanTreeNode * root)
 		root->visited = true;
 
 	NanTreeNode * chld = NULL;
+
+	/* defrag (group) siblings; won't mess with priorities at this point since
+	 * numbering has been done.
+	 */
+	NanTreeNode * chld_sorted = root->first_child;
+	while(chld_sorted) {
+		chld = chld_sorted;
+		while(chld && chld->sibling && chld->sibling->sibling) {
+			if( !nan_tree_nodes_match(chld, chld->sibling) &&
+					 nan_tree_nodes_match(chld, chld->sibling->sibling) )
+			{
+				NanTreeNode * sib1 = chld->sibling;
+				NanTreeNode * sib2 = chld->sibling->sibling;
+
+				chld->sibling = sib2;
+				sib1->sibling = sib2->sibling;
+				sib2->sibling = sib1;
+			}
+			
+			chld = chld->sibling;
+		}
+
+		chld_sorted = chld_sorted->sibling;
+	}
 
 	/* Merge adjacent siblings with the same content */
 	chld = root->first_child;
@@ -599,6 +667,34 @@ void nan_tree_simplify(NanTreeNode * root)
 		 */
 		if(!merged)
 			chld = chld->sibling;
+	}
+
+	/* Sort to facilitate nasting while branch generation */
+	/* TODO not needed when use_jmptab is on */
+	chld_sorted = root->first_child;
+	while(chld_sorted) {
+		NanTreeNode * futuresib = chld_sorted->sibling;
+		NanTreeNode * futuresib_prvsib = NULL;
+		for(chld = futuresib; chld; chld = chld->sibling) {
+			if(nan_tree_node_id(chld) < nan_tree_node_id(futuresib))
+				futuresib = chld;
+			
+			futuresib_prvsib = chld;
+		}
+
+		if(futuresib != chld_sorted->sibling) {
+			/* Swap futuresib and the current sibling (chld_sorted->sibling) */
+		
+			NanTreeNode * cursib = chld_sorted->sibling;
+			NanTreeNode * cursib_sibling = cursib->sibling;
+
+			chld_sorted->sibling = futuresib;
+			cursib->sibling = futuresib->sibling;
+			futuresib->sibling = cursib_sibling;
+			futuresib_prvsib->sibling = cursib;
+		}
+
+		chld_sorted = futuresib;
 	}
 
 	for(chld = root->first_child; chld; chld = chld->sibling)
