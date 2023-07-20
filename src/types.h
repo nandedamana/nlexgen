@@ -24,7 +24,7 @@ typedef struct NlexHandle {
 	size_t buf_alloc_unit;
 	void (*on_error)(NlexHandle *nh, NlexErr err);
 	void (*on_consume)(NlexHandle *nh, size_t offset, size_t len);
-	void * userdata;
+	void *userdata;
 	FILE * fp;
 	char * buf;
 	char * bufptr;

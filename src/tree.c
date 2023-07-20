@@ -209,8 +209,14 @@ void nan_tree_astates_to_code(NanTreeNode * root)
 		nan_tree_astates_to_code(tptr);
 }
 
-const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
+const char * nlg_tree_add_rule(
+	NanTreeNode * root, NlexHandle * nh_main, const char * pattern, const char * action)
 {
+	// TODO try if I can avoid using nlex_* for this
+	NlexHandle _nh;
+	NlexHandle * nh = &_nh; // To make refactoring smooth
+	nlex_init(nh, NULL, pattern);
+
 	NanTreeNode * tcurnode = root;
 	NanTreeNode * klndest = NULL;
 	NanTreeNode * lastsubxparent = NULL;
@@ -228,41 +234,11 @@ const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh)
 
 	NanCharacterList * chlist = NULL;
 
-	nan_treenode_init(root);
-	root->ch = NLEX_CASE_ROOT;
-	
-	/* ID has to be even because it is a non-action node;
-	 * 0 cannot be used because it is a marker (do-not-care cases).
-	 */
-	root->id          = 2;
-
 	while( (ch = nlex_next(nh)) != 0 && ch != EOF) {
-		if(ch == '\t' || (ch == ' ' && !in_list)) { /* token-action separator */
-			/* Copy everything until line break or EOF into the action buffer */
-			
-			nlex_shift(nh);
-			while((ch = nlex_next(nh)) && (ch != '\n' && ch != EOF));
-			
-			/* BEGIN Create/attach the action node to the tree */
-			NanTreeNode * anode = nan_treenode_new(nh, NLEX_CASE_ACT);
-
-			/* Copy the action. */
-			nan_treenode_set_actstr(anode, nlex_bufdup(nh, 1, 0));
-			
-			nan_tree_node_append_child(tcurnode, anode);
-			/* END Attach the action node to the tree */			
-
-			/* Reset the tree pointer */
-			tcurnode = root;
-			
-			goto nextiter;
-		}
 		/* TODO can I avoid this [redundant] comparison? */
 		/* XXX `*else* if` is unnecessary since `continue` is used above.
 		 * But this ensures safety in case I change something.
 		 */
-		else if(ch == '\n' || ch == 0 || ch == EOF)
-			return NLEXERR_NO_ACT_GIVEN;
 
 		if(escaped) {
 			ch = nlex_get_counterpart(ch, escin, escout);
@@ -446,7 +422,27 @@ nextiter:
 	if(in_list)
 		return NLEXERR_LIST_NOT_CLOSED;
 	
+	/* BEGIN Create/attach the action node to the tree */
+	NanTreeNode * anode = nan_treenode_new(nh_main, NLEX_CASE_ACT);
+
+	/* Copy the action. */
+	nan_treenode_set_actstr(anode, action);
+
+	nan_tree_node_append_child(tcurnode, anode);
+	/* END Attach the action node to the tree */			
+
 	return NLEXERR_SUCCESS;
+}
+
+void nlg_tree_init_root(NanTreeNode * root)
+{
+	nan_treenode_init(root);
+	root->ch = NLEX_CASE_ROOT;
+	
+	/* ID has to be even because it is a non-action node;
+	 * 0 cannot be used because it is a marker (do-not-care cases).
+	 */
+	root->id = 2;
 }
 
 /* XXX The resulting code will go through an extra step to reach

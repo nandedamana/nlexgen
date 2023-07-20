@@ -1,6 +1,6 @@
 /* tree.h
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include "error.h"
 #include "read.h"
+#include "treebuild.h"
 #include "tree_types.h"
 #include "types.h"
 
@@ -230,7 +231,12 @@ static inline void
 /* Conversion of action nodes */
 void nan_tree_astates_to_code(NanTreeNode * root);
 
-const char * nan_tree_build(NanTreeNode * root, NlexHandle * nh);
+const char * nlg_build_tree(NanTreeNode * root, NlexHandle * nh);
+
+/* XXX Duplication in treebuild.ngg */
+const char * nlg_tree_add_rule(
+	NanTreeNode * root, NlexHandle * nh, const char * pattern, const char * action);
+void nlg_tree_init_root(NanTreeNode * root);
 
 static inline void
 	nan_tree_node_convert_to_kleene(NanTreeNode * node, NanTreeNode * klnptr)

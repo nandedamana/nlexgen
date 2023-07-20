@@ -187,7 +187,7 @@ static inline _Bool nlex_end_of_input(NlexHandle * nh)
 {
 	if(nh->fp)
 		return nh->eof_read;
-	else /* readin from string */
+	else /* reading from string */
 		return (nh->bufptr != nh->buf - 1) && (nlex_last(nh) == 0);
 }
 

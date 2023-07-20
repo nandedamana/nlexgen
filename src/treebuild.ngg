@@ -1,0 +1,111 @@
+// treebuild.ngg
+// This file is part of nlexgen, a lexer generator.
+// Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
+// File started on 2023-07-20
+
+include vstring
+
+refer 'types.ngg'
+vh #include "types.h"
+
+refer 'tree_types.ngg'
+vh #include "tree_types.h"
+
+vh #include "error.h"
+vh #include "read.h"
+
+extern var NLEXERR_SUCCESS, NLEXERR_NO_ACT_GIVEN string
+shadow fun nlex_last gives int takes nh NlexHandle
+shadow fun nlex_next gives int takes nh NlexHandle
+shadow fun nlg_tree_add_rule gives string
+	takes root NanTreeNode, nh_main NlexHandle, pattern string, action string;
+shadow fun nlg_tree_init_root takes root NanTreeNode;
+
+vh const char * nlg_tree_add_rule(
+vh 	NanTreeNode * root, NlexHandle * nh, const char * pattern, const char * action);
+vh void nlg_tree_init_root(NanTreeNode * root);
+
+extern class NanTreeNode;
+
+// Returns pattern, action, error
+fun nlg-get-rule gives (mstring, mstring, string) takes nh NlexHandle
+	local vspat new vstring/['']
+	local vsact new vstring/['']
+	
+	var in-list bool
+	var escaped bool
+	
+	while true
+		var ch / =nlex_next/[nh]
+
+		if in ch [ c'\r', c'\n', EOF, c'\0' ]
+			if gt =get-length\vspat 0
+				return nil, nil, NLEXERR_NO_ACT_GIVEN
+			;
+			else
+				return nil, nil, NLEXERR_SUCCESS
+			;
+		;
+
+		if eq ch c'['
+			if not escaped
+				==in-list true;;
+		;
+		elif eq ch c']'
+			if not escaped
+				==in-list false;;
+		;
+
+		if escaped
+			==escaped false;;
+		elif eq ch c'\\'
+			==escaped true;;
+		
+		if in ch [ c'\t' ]
+			break
+		;
+		elif and (eq ch c' ') (not in-list)
+			while eq =nlex_next/[nh] c' ';
+			break
+		;
+
+		=appendc\vspat/[ch]
+	;
+
+	=appendc\vsact/[=nlex-last/[nh]]
+
+	while true
+		var ch / =nlex_next/[nh]
+		if in ch [ c'\r', c'\n', EOF, c'\0', ]
+			break;;
+
+		=appendc\vsact/[ch]
+	;
+
+	var pat / =detach\vspat
+	var act / =detach\vsact
+	
+	return pat, act, NLEXERR_SUCCESS
+;
+
+fun nlg_build_tree gives string takes root NanTreeNode, nh NlexHandle
+	=nlg_tree_init_root/[root]
+
+	while true
+		var (pat, act, err) / =nlg-get-rule/[nh]
+		local pat-autodel / pat
+		
+		if ne NLEXERR_SUCCESS err
+			return err;;
+		elif no pat
+			return NLEXERR_SUCCESS;;
+		
+		assert pat, act;
+		
+		==err =nlg_tree_add_rule/[root, nh, pat, act]
+		if ne NLEXERR_SUCCESS err
+			return err;;
+	;
+	
+	return NLEXERR_SUCCESS
+;

@@ -1,15 +1,16 @@
 #include <assert.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "tree_types.h"
 
 void nan_character_list_construct(NanCharacterList *this)
 {
 	this->count = 0;
+	this->list = NULL;
 }
 
 void nan_character_list_destruct(NanCharacterList *this)
@@ -49,21 +50,21 @@ void nan_tree_node_vector__resize(NanTreeNodeVector *this, size_t newcount)
 {
 	size_t UNIT = 8;
 	size_t newalloccount = this->alloccount;
-	assert(((newcount - this->count) == 1 || (newcount - this->count) == -1)); /* vector.ngg:28 */
-	if((this->alloccount != newcount)) {
-		if((this->alloccount < newcount)) {
-			newalloccount = (this->alloccount + UNIT);
+	assert((newcount - this->count) == 1 || (newcount - this->count) == -1); /* vector.ngg:28 */
+	if(this->alloccount != newcount) {
+		if(this->alloccount < newcount) {
+			newalloccount = this->alloccount + UNIT;
 		} else {
-			size_t spare = (this->alloccount - newcount);
-			if((spare > (2 * UNIT))) {
-				newalloccount = (this->alloccount - UNIT);
+			size_t spare = this->alloccount - newcount;
+			if(spare > (2 * UNIT)) {
+				newalloccount = this->alloccount - UNIT;
 			}
 
 		}
 
-		assert((newalloccount >= this->count)); /* vector.ngg:46 */
-		if((newalloccount != this->alloccount)) {
-			if((newalloccount == 0)) {
+		assert(newalloccount >= this->count); /* vector.ngg:46 */
+		if(newalloccount != this->alloccount) {
+			if(newalloccount == 0) {
 				free(this->arr);
 				this->arr = NULL;
 			} else {
@@ -82,9 +83,9 @@ void nan_tree_node_vector__resize(NanTreeNodeVector *this, size_t newcount)
 
 void nan_tree_node_vector_append(NanTreeNodeVector *this, NanTreeNode *newitem)
 {
-	size_t newcount = (1 + this->count);
+	size_t newcount = 1 + this->count;
 	nan_tree_node_vector__resize(this, newcount);
-	this->arr[(newcount - 1)] = newitem;
+	this->arr[newcount - 1] = newitem;
 }
 
 void nan_tree_node_vector_clear(NanTreeNodeVector *this)
@@ -97,29 +98,29 @@ void nan_tree_node_vector_clear(NanTreeNodeVector *this)
 
 NanTreeNode* nan_tree_node_vector_get_item(NanTreeNodeVector *this, size_t index)
 {
-	assert((index < this->count)); /* vector.ngg:80 */
+	assert(index < this->count); /* vector.ngg:80 */
 
 	return this->arr[index];
 }
 
 NanTreeNode* nan_tree_node_vector_pop(NanTreeNodeVector *this)
 {
-	assert((this->count > 0)); /* vector.ngg:86 */
-	NanTreeNode *r = nan_tree_node_vector_get_item(this, (this->count - 1));
-	this->count = (this->count - 1);
+	assert(this->count > 0); /* vector.ngg:86 */
+	NanTreeNode *r = nan_tree_node_vector_get_item(this, this->count - 1);
+	this->count = this->count - 1;
 
 	return r;
 }
 
 void nan_tree_node_vector_set_item(NanTreeNodeVector *this, size_t index, NanTreeNode *itm)
 {
-	assert((index < this->count)); /* vector.ngg:99 */
+	assert(index < this->count); /* vector.ngg:99 */
 	this->arr[index] = itm;
 }
 
 _Bool nan_tree_node_vector_is_empty(NanTreeNodeVector *this)
 {
-	return (0 == this->count);
+	return 0 == this->count;
 }
 
 NanTreeNodeVector* nan_tree_node_vector_new()

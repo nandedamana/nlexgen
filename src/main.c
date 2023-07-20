@@ -65,7 +65,7 @@ int main(int argc, char * argv[])
 	nlex_init(nh, fpin, NULL);
 
 	NanTreeNode troot;
-	const char * err = nan_tree_build(&troot, nh);
+	const char * err = nlg_build_tree(&troot, nh);
 	if(err != NLEXERR_SUCCESS)
 		nlex_die(err);
 
