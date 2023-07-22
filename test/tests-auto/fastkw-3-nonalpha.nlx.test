@@ -1,0 +1,7 @@
+int	kw:int-
+long	kw:long-
+==	equals-
+== ==	equals-WS-equals-
+==int ==	equals-kw:int-WS-equals-
+=	assign-
+myobj	id-

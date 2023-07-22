@@ -1,0 +1,10 @@
+[ ]+	{ printf("WS-"); }
+\d+	{ printf("intlit-"); }
+int	{ printf("kw:int-"); }
+long	{ printf("kw:long-"); }
+var	{ printf("kw:var-"); }
+==	{ printf("equals-"); }
+=	{ printf("assign-"); }
+w"(\\.|[^\\"])*"	{ printf("wcharstr-"); }
+win	{ printf("kw:win-"); }
+\w[\w-]*	{ printf("id-"); }

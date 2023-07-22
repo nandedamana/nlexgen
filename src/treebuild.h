@@ -22,7 +22,7 @@ return this->len;
 #include "error.h"
 #include "read.h"
 const char * nlg_tree_add_rule(
-	NanTreeNode * root, NlexHandle * nh, const char * pattern, const char * action);
+	NanTreeNode * root, NlexHandle * nh, const char * pattern, char * action);
 void nlg_tree_init_root(NanTreeNode * root);
 typedef struct _ngg_tuple_nlg_get_rule {
 	char * m0;

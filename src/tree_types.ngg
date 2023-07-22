@@ -27,6 +27,9 @@ class NanTreeNode
 	var id NanTreeNodeId;
 
   var ch NlexCharacter;
+  
+  // Only if the node is a fastkw action node
+  var fastkw_pattern mstring;
 
   var data NanTreeNodeData;
 

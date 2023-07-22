@@ -22,7 +22,7 @@ shadow fun nlg_tree_add_rule gives string
 shadow fun nlg_tree_init_root takes root NanTreeNode;
 
 vh const char * nlg_tree_add_rule(
-vh 	NanTreeNode * root, NlexHandle * nh, const char * pattern, const char * action);
+vh 	NanTreeNode * root, NlexHandle * nh, const char * pattern, char * action);
 vh void nlg_tree_init_root(NanTreeNode * root);
 
 extern class NanTreeNode;

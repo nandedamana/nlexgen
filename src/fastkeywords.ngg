@@ -1,0 +1,32 @@
+// treebuild.ngg
+// This file is part of nlexgen, a lexer generator.
+// Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
+// File started on 2023-07-21
+
+refer 'ctype.ngg'
+vh #include "ctype.h"
+
+refer 'tree_types.ngg'
+vh #include "tree_types.h"
+
+var fastkeywords_enabled bool
+var idactnode NanTreeNode
+
+fun fastkeywords-init takes enabled bool
+	if not enabled
+		return;;
+	
+	==fastkeywords_enabled true
+;
+
+fun is-fastkeyword gives bool takes pattern string
+	// ngg: conflict with v, vh, vtop, etc.
+	if eq c'v' ..0\pattern
+		return false;;
+
+	for c in pattern
+		if not =islower/[c]
+			return false;;;
+	
+	return true
+;

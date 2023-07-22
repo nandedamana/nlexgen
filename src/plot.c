@@ -54,6 +54,9 @@ void nan_plot_rec(NanTreeNode * node, FILE * fp)
 	else {
 		fprintf(fp, "[label=\"%u: %d", nan_tree_node_id(node), node->ch);
 		
+		if(node->fastkw_pattern)
+			fprintf(fp, "\nfastkw: %s", node->fastkw_pattern);
+		
 		for(size_t i = 0; mrkrs_s[i]; i++)
 			if(-(node->ch) & mrkrs[i])
 				fprintf(fp, "\n%s\n", mrkrs_s[i]);

@@ -18,11 +18,12 @@
 #define NLEX_CASE_NONE    -1
 #define NLEX_CASE_ROOT    -2
 #define NLEX_CASE_ACT     -4
-#define NLEX_CASE_PASSTHRU -8
+#define NLEX_CASE_FASTKWACT -8
+#define NLEX_CASE_PASSTHRU -16
 
 /* Will be negated. */
 #define NLEX_CASE_ANYCHAR    1024
-#define NLEX_CASE_DIGIT     16
+#define NLEX_CASE_DIGIT     4096
 #define NLEX_CASE_LETTER    2048
 #define NLEX_CASE_EOF       32
 #define NLEX_CASE_WORDCHAR  64
@@ -54,14 +55,7 @@ static inline void nan_tree_unvisit(NanTreeNode * root)
 
 static inline void nan_treenode_init(NanTreeNode * root)
 {
-	root->first_child = NULL;
-	root->sibling     = NULL;
-	root->data.actstr = NULL;
-	root->klnptr      = NULL;
-	root->klnstate_id_auto = 0;
-	root->klnptr_from = NULL;
-	root->id          = 0;
-	root->visited     = false;
+	nan_tree_node_construct(root);
 }
 
 // TODO make non-inline
@@ -125,7 +119,7 @@ static inline NanTreeNode * nan_treenode_new(NlexHandle * nh, NlexCharacter ch)
 
 static inline const char * nan_treenode_get_actstr(const NanTreeNode * node)
 {
-	assert( node->ch == NLEX_CASE_ACT );
+	assert( node->ch == NLEX_CASE_ACT || node->ch == NLEX_CASE_FASTKWACT );
 	return (const char *) node->data.actstr;
 }
 
@@ -138,7 +132,7 @@ static inline NanCharacterList *
 
 static inline void nan_treenode_set_actstr(NanTreeNode * node, char * s)
 {
-	assert( node->ch == NLEX_CASE_ACT );
+	assert( node->ch == NLEX_CASE_ACT || node->ch == NLEX_CASE_FASTKWACT );
 	node->data.actstr = s;
 }
 
@@ -233,9 +227,12 @@ void nan_tree_astates_to_code(NanTreeNode * root);
 
 const char * nlg_build_tree(NanTreeNode * root, NlexHandle * nh);
 
+void nlg_gen_fastkw_onid(NanTreeNode * root);
+
 /* XXX Duplication in treebuild.ngg */
 const char * nlg_tree_add_rule(
-	NanTreeNode * root, NlexHandle * nh, const char * pattern, const char * action);
+	NanTreeNode * root, NlexHandle * nh, const char * pattern, char * action);
+void nlg_gen_fastkw_selection(NanTreeNode * root);
 void nlg_tree_init_root(NanTreeNode * root);
 
 static inline void
@@ -389,14 +386,9 @@ static inline void nan_tree_node_append_child(NanTreeNode * node, NanTreeNode * 
 	}
 	else {
 		NanTreeNode * tptr = node->first_child;
-		while(tptr) {
-			if(! tptr->sibling) {
-				tptr->sibling = chld;
-				break;
-			}
-		
-			tptr = tptr->sibling;
-		}
+		while(tptr->sibling) tptr = tptr->sibling;
+
+		tptr->sibling = chld;
 	}
 }
 

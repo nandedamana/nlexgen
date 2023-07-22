@@ -5,8 +5,10 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "error.h"
+#include "fastkeywords.h"
 #include "tree.h"
 #include "tree_types.h"
 
@@ -103,7 +105,7 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 
 	/* Non-action nodes */
 	for(tptr = node->first_child; tptr; sibbak = tptr, tptr = tptr->sibling) {
-		if(tptr->ch == NLEX_CASE_ACT)
+		if(tptr->ch == NLEX_CASE_ACT || tptr->ch == NLEX_CASE_FASTKWACT)
 			continue;
 			
 		if(nan_treenode_is_klndst(tptr))
@@ -209,9 +211,60 @@ void nan_tree_astates_to_code(NanTreeNode * root)
 		nan_tree_astates_to_code(tptr);
 }
 
-const char * nlg_tree_add_rule(
-	NanTreeNode * root, NlexHandle * nh_main, const char * pattern, const char * action)
+void nlg_gen_fastkw_onid(NanTreeNode * root)
 {
+	assert(idactnode);
+
+	fprintf(fpout,
+		"%s\ngoto after_fastkw;\n",
+		nan_treenode_get_actstr(idactnode));
+}
+
+// TODO use hashing or trie-based branching
+void nlg_gen_fastkw_selection(NanTreeNode * root)
+{
+	NanTreeNode * tptr;
+	bool first = true;
+
+	for(tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->fastkw_pattern) {
+			if(!first)
+				fprintf(fpout, "else ");
+			else
+				first = false;
+
+			// XXX Checking the length is a must (see the test tests-auto/fastkw-2-prefix.nlx)
+			fprintf(fpout,
+				"if(nh->curtoklen == %zu && 0 == strncmp(nh->buf + nh->curtokpos, \"%s\", nh->curtoklen)) {\n%s\ngoto after_fastkw;\n}\n",
+				strlen(tptr->fastkw_pattern),
+				tptr->fastkw_pattern,
+				nan_treenode_get_actstr(tptr));
+		}
+	}
+	
+	if(!first)
+		fprintf(fpout, "else {\n");
+
+	nlg_gen_fastkw_onid(root);
+
+	if(!first)
+		fprintf(fpout, "}\n");
+}
+
+const char * nlg_tree_add_rule(
+	NanTreeNode * root, NlexHandle * nh_main, const char * pattern, char * action)
+{
+	if(fastkeywords_enabled && is_fastkeyword(pattern)) {
+		NanTreeNode * anode = nan_treenode_new(nh_main, NLEX_CASE_FASTKWACT);
+		nan_treenode_set_actstr(anode, action);
+		anode->fastkw_pattern = strdup(pattern);
+		assert(anode->fastkw_pattern);
+
+		nan_tree_node_append_child(root, anode);
+
+		return NLEXERR_SUCCESS;
+	}
+
 	// TODO try if I can avoid using nlex_* for this
 	NlexHandle _nh;
 	NlexHandle * nh = &_nh; // To make refactoring smooth
@@ -431,6 +484,10 @@ nextiter:
 	nan_tree_node_append_child(tcurnode, anode);
 	/* END Attach the action node to the tree */			
 
+	/* Last-added node is assumed to be the ID action */
+	if(fastkeywords_enabled)
+		idactnode = anode;
+
 	return NLEXERR_SUCCESS;
 }
 
@@ -563,6 +620,9 @@ void nan_tree_istates_to_code_switch(NanTreeNode * root)
 	else
 		root->visited = true;
 
+	if(root->ch == NLEX_CASE_ACT || root->ch == NLEX_CASE_FASTKWACT)
+		return;
+
 	fprintf(fpout, "case %u: {\n", nan_tree_node_id(root));
 	nan_inode_to_code(root, false);
 	fputs("break; }\n", fpout);
@@ -640,6 +700,11 @@ void nan_tree_simplify(NanTreeNode * root)
 	/* Merge adjacent siblings with the same content */
 	chld = root->first_child;
 	while(chld && chld->sibling) {
+		if(chld->ch == NLEX_CASE_FASTKWACT) {
+			chld = chld->sibling;
+			continue;
+		}
+
 		bool merged = false;
 	
 		bool chld_has_action    = nan_treenode_has_action(chld);

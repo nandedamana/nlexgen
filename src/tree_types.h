@@ -24,6 +24,7 @@ typedef struct NanTreeNode {
 	_ngg_vtab_t_NanTreeNode _ngg_vtab_nan_tree_node;
 	unsigned int id;
 	int ch;
+	char * fastkw_pattern;
 	NanTreeNodeData data;
 	NanTreeNode *klnptr;
 	unsigned int klnstate_id_auto;

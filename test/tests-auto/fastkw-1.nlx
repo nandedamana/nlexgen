@@ -1,0 +1,3 @@
+int	{ printf("kw:int-"); }
+long	{ printf("kw:long-"); }
+\w+	{ printf("id-"); }

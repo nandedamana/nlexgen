@@ -25,6 +25,7 @@ void nan_tree_node_construct(NanTreeNode *this)
 	this->klnptr_from = NULL;
 	this->klnstate_id_auto = 0;
 	this->klnptr = NULL;
+	this->fastkw_pattern = NULL;
 	this->ch = 0;
 	this->id = 0;
 }

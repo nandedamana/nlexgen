@@ -60,7 +60,7 @@ class NlexHandle
 	var last_accepted_state  NanTreeNodeId;
 	
 	// 'this stack' and 'next stack' (stacks holding the states for
-	// this iteration and the next.
+	// this iteration and the next).
 	// size_t chosen because currently states are identified using compile-time
 	// addresses.
 //	var tstack         array of NanTreeNodeId;

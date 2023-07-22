@@ -1,6 +1,7 @@
 #!/bin/bash
 # Nandakumar Edamana
 # File started on 2021-01-30, copying the version started in 2020 for nguigen.
+# env: NLEXFLAGS
 
 set -e
 set -o nounset
@@ -31,12 +32,18 @@ else
 	exit 1
 fi
 
+nlxopts=${NLEXFLAGS-}
+if [ "$(echo "$nlxfile"|grep fastkw)" ]; then
+	nlxopts='--fastkeywords'
+fi
+
 echo '#include <assert.h>' > "$ocfile"
+echo '#include <ctype.h>' >> "$ocfile"
 echo '#include <read.h>' >> "$ocfile"
 echo 'extern int ch;' >> "$ocfile"
 echo 'void get_token(NlexHandle * nh) {' >> "$ocfile"
 # TODO timeout?
-cat "$nlxfile"|"$(dirname "$0")"/../src/nlexgen >> "$ocfile"
+cat "$nlxfile"|"$(dirname "$0")"/../src/nlexgen $nlxopts >> "$ocfile"
 echo '}' >> "$ocfile"
 
 rsync "$scriptdir"'/main-for-auto.c' "$mcfile"

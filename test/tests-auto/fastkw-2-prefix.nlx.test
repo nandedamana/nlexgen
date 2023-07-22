@@ -1,0 +1,4 @@
+int	kw:int-
+internal	kw:internal-
+long	kw:long-
+myobj	id-

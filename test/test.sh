@@ -24,42 +24,51 @@ function onexit {
 
 trap onexit EXIT
 
-while read t; do
-	if [ -f "$t/Makefile" ]; then
-		usemake=1
-	elif [ -f "$t" ]; then # auto
-		unset usemake
-	else # a dir withou a Makefile
-		continue
-	fi
-	
-	echo "$t"
-	echo '===='
+flagsarr=()
+flagsarr+=('')
+flagsarr+=('--x-use-jump-table')
+flagsarr+=('--no-simplify')
+flagsarr+=('--no-simplify --x-use-jump-table')
 
-	if [ "${usemake-}" ]; then
-		make -C "$t" clean
-		timeout 10s make -C "$t"
-	else
-		./test-auto.sh "$t"
-	fi
+for flags in "${flagsarr[@]}"; do
+	while read t; do
+		if [ -f "$t/Makefile" ]; then
+			usemake=1
+		elif [ -f "$t" ]; then # auto
+			unset usemake
+		else # a dir withou a Makefile
+			continue
+		fi
+		
+		title="$t (flags: $flags)"
+		echo "$title"
+		echo '===='
 
-	if [ "$?" -eq 0 ]; then
-		echo -e '\x1b[32mPASS\x1b[0m'
-		npass="$(expr $npass + 1)"
-	else # won't enter if dieonerr is set; that is why I have an exit trap.
-		echo -e '\x1b[31mFAIL\x1b[0m'
-		nfail="$(expr $nfail + 1)"
-		fails+=("$t")
-	fi
+		if [ "${usemake-}" ]; then
+			make -C "$t" clean
+			timeout 10s make -C "$t"
+		else
+			NLEXFLAGS="$flags" ./test-auto.sh "$t"
+		fi
 
-	echo '----'
-	echo ''
-done < <(find tests-make -type d; find tests-auto -name '*.nlx' -type f)
+		if [ "$?" -eq 0 ]; then
+			echo -e '\x1b[32mPASS\x1b[0m'
+			npass="$(expr $npass + 1)"
+		else # won't enter if dieonerr is set; that is why I have an exit trap.
+			echo -e '\x1b[31mFAIL\x1b[0m'
+			nfail="$(expr $nfail + 1)"
+			fails+=("$title")
+		fi
+
+		echo '----'
+		echo ''
+	done < <(find tests-make -type d; find tests-auto -name '*.nlx' -type f)
+done
 
 echo ''
 echo "Pass Count: $npass"
 echo "Fail Count: $nfail"
 echo 'Failed Tests:'
-for t in ${fails[@]}; do
+for t in "${fails[@]}"; do
 	echo "  $t"
 done

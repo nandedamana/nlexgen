@@ -7,6 +7,7 @@
 #include <memory.h>
 
 #include "error.h"
+#include "fastkeywords.h"
 #include "read.h"
 #include "tree.h"
 #include "plot.h"
@@ -16,6 +17,7 @@ int main(int argc, char * argv[])
 	FILE * fpin = stdin;
 	bool simplify = true;
 	char * outpath_gv = NULL;
+	bool clopt_fastkw = false;
 	
 	// XXX Implemented and tested on 2023-04-07; no performance gain because:
 	// 1) The current implementation was already using nested ifs to reduce comparison
@@ -32,7 +34,10 @@ int main(int argc, char * argv[])
 		size_t i = 0;
 	
 		while(++i < argc) {
-			if(0 == strcmp(argv[i], "--no-simplify")) {
+			if(0 == strcmp(argv[i], "--fastkeywords")) {
+				clopt_fastkw = true;
+			}
+			else if(0 == strcmp(argv[i], "--no-simplify")) {
 				simplify = false;
 			}
 			else if(0 == strcmp(argv[i], "--gv")) {
@@ -56,6 +61,14 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
+
+	// Whether to generate hash-table-based keyword detection (instead of state
+	// machine); it's assumed:
+	//  1) Keywords are of English lowercase letters only
+	//  2) The regex pattern for keywords represent a subset of IDs
+	//  3) The rule for IDs is present in the input and it is the last one
+	//  4) The rule for IDs conforms to that of nguigen
+	fastkeywords_init(clopt_fastkw);
 
 	NlexHandle *  nh;
 	nh = nlex_handle_new();
@@ -123,9 +136,43 @@ int main(int argc, char * argv[])
 			"_Bool ch_set = 0;\n"
 			"size_t ch_read_after_accept = 0;\n"
 			"int lastmatchat = -1;\n"
+			// TODO why aren't these part of reset_states()?
 			"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
-			"nh->curtoklen = 0;\n"
-			"nh->last_accepted_state = 0;\n"
+			"nh->curtoklen = 0;\n");
+
+	if(fastkeywords_enabled) {
+		fprintf(fpout,
+			"_Bool couldbekw = 0;\n"
+			"_Bool couldbeid = 0;\n"
+			"char * bufptrbak = nh->bufptr;\n"
+			// 'v' not accepted because it could start v, vh and vtop lines (ngg)
+			"if( islower(ch = nlex_next(nh)) && ch != 'v' ) {\n"
+				"while(islower(ch)) { nh->curtoklen++; ch = nlex_next(nh); }\n"
+				"\n"
+				"/* Maybe a keyword ended now, or it is an ID and it continues, or it is something like L\"wcharstr\" */\n"
+				"int curtoklenbak = nh->curtoklen;\n"
+				"while(isalpha(ch) || isdigit(ch) || ch == '_' || ch == '-') { nh->curtoklen++; ch = nlex_next(nh); }\n"
+				"couldbeid = (ch != '\\'' && ch != '\\\"' && ch != '='); /* e.g.: L\"wcharstr\", sum= */\n"
+				"couldbekw = couldbeid && (nh->curtoklen == curtoklenbak); /* No trailing quotes and no id-exclusive chars after keyword match */\n"
+
+				"if(couldbeid && !couldbekw) {\n");
+					nlg_gen_fastkw_onid(&troot);
+		fprintf(fpout,
+				"} else if(couldbekw) {\n");
+					nlg_gen_fastkw_selection(&troot);
+		fprintf(fpout,
+				"} else {\n"
+					"nh->bufptr = nh->buf + nh->curtokpos - 1;\n"
+					"nh->curtoklen = 0;\n"
+				"}\n");
+
+		fprintf(fpout,
+			"} else { /* Read only one char and it wasn't a fastkeyword/id starter */\n"
+				"nh->bufptr = nh->buf + nh->curtokpos - 1;\n"
+			"}\n");
+	}
+
+	fprintf(fpout,
 			"nlex_reset_states(nh);\n"
 			"nlex_nstack_push(nh, %d);\n",
 			troot.id);
@@ -134,7 +181,7 @@ int main(int argc, char * argv[])
 
 #ifdef NLXDEBUG
 	fprintf(fpout,
-				"if(nh->buf)\n"
+				"if(nh->buf && nh->bufptr >= nh->buf)\n" // TODO is the first `nh->buf` needed?
 					"fprintf(stderr, "
 						"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
 				"else\n"
@@ -210,6 +257,9 @@ int main(int argc, char * argv[])
 	nan_tree_astates_to_code(&troot);
 	fprintf(fpout,
 				"}\n");
+
+	if(fastkeywords_enabled)
+		fprintf(fpout, "after_fastkw:\n");
 
 	fprintf(fpout,
 				"assert(nh->curtoklen > 0);\n"

@@ -180,7 +180,18 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf);
 /* Look at the last-scanned character without moving the pointer */
 static inline char nlex_last(NlexHandle * nh)
 {
+	assert(nh->bufptr >= nh->buf);
 	return *(nh->bufptr);
+}
+
+// Don't call twice without caling nlex_next() in between.
+// Use `nh->bufptr = nh->buf + nh->curtokpos - 1;` to backtrack the whole
+// partially-read token (even if it's a single char); it's more tested
+// compared to this.
+static inline void nlex_back(NlexHandle * nh)
+{
+	assert(nh->bufptr >= nh->buf); // nh->bufptr becoming (nh->buf - 1) is okay
+	nh->bufptr--;
 }
 
 static inline _Bool nlex_end_of_input(NlexHandle * nh)
