@@ -220,8 +220,7 @@ void nlg_gen_fastkw_onid(NanTreeNode * root)
 		nan_treenode_get_actstr(idactnode));
 }
 
-// TODO use hashing or trie-based branching
-void nlg_gen_fastkw_selection(NanTreeNode * root)
+void nlg_gen_fastkw_selection_strcmp(NanTreeNode * root)
 {
 	NanTreeNode * tptr;
 	bool first = true;
@@ -249,6 +248,21 @@ void nlg_gen_fastkw_selection(NanTreeNode * root)
 
 	if(!first)
 		fprintf(fpout, "}\n");
+}
+
+void nlg_gen_fastkw_selection_trie(NanTreeNode * root)
+{
+	TrieNode * trieroot = fastkeywords_trie_new();
+
+	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling) {
+		if(tptr->fastkw_pattern)
+			trie_node_add(trieroot,
+				tptr->fastkw_pattern, 0, nan_treenode_get_actstr(tptr));
+	}
+
+	fastkeywords_trie_to_code(trieroot, 0, fpout);
+
+	nlg_gen_fastkw_onid(root);
 }
 
 const char * nlg_tree_add_rule(

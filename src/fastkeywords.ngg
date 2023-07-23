@@ -10,7 +10,60 @@ refer 'tree_types.ngg'
 vh #include "tree_types.h"
 
 var fastkeywords_enabled bool
+
+// TODO clopt for customization (also, add to tests)
+var fastkeywords_use_strcmp bool
+
 var idactnode NanTreeNode
+
+class TrieNode
+	own first-child TrieNode
+	own last-child  TrieNode
+	own sibling     TrieNode
+	var action      string
+	var ch          char // don't care for root
+	
+	fun add takes key string, keyoffset int, action string
+		// base condition for recursion
+		if eq c'\0' ..keyoffset\key
+			assert no action\this
+			
+			// so the node with the last char (not NIL) gets the action
+			==action\this action
+			return
+		;
+
+		for chld through first-child
+			if eq ch\chld ..keyoffset\key
+				break;;
+		;
+
+		if or (no chld) (ne ch\chld ..keyoffset\key)
+			==chld new TrieNode
+			==ch\chld ..keyoffset\key
+			=append\this/[chld]
+		;
+
+		=add\chld/[key, sum keyoffset 1, action]
+	;
+	
+	fun append takes chld TrieNode
+		if no first-child
+			assert no last-child
+			==first-child chld
+			==last-child  chld
+		;
+		else
+			assert last-child
+			==sibling\last-child chld
+			==last-child         chld
+		;
+	;
+	
+	fun get-next gives TrieNode
+		return sibling
+	;
+;
 
 fun fastkeywords-init takes enabled bool
 	if not enabled
@@ -29,4 +82,32 @@ fun is-fastkeyword gives bool takes pattern string
 			return false;;;
 	
 	return true
+;
+
+// TODO rem once everything is ngg
+fun fastkeywords_trie_new gives TrieNode
+	return new TrieNode
+;
+
+fun fastkeywords_trie_to_code takes root TrieNode, level int, fp stream
+	=fprintf/[fp, 'if(nh->curtoklen > %d) {\n', level]
+
+	for chld through first-child\root
+		if ne chld first-child\root
+			=fputs/['else ', fp];;
+		
+		=fprintf/[fp, 'if(nh->buf[nh->curtokpos + %d] == %d) {\n', level, ch\chld]
+
+		if action\chld
+			=fprintf/[fp,
+				'if(nh->curtoklen == %d) {\n%s\ngoto after_fastkw;\n}\n',
+				sum level 1, action\chld]
+		;
+
+		=fastkeywords_trie_to_code/[chld, sum level 1, fp]
+		=fprintf/[fp,
+			'} /* END if(nh->buf[nh->curtokpos + %d] == %d) { */ \n', level, ch\chld]
+	;
+	
+	=fprintf/[fp, '} /* END if(nh->curtoklen > %d) */\n', level]
 ;

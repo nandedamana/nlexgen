@@ -232,7 +232,8 @@ void nlg_gen_fastkw_onid(NanTreeNode * root);
 /* XXX Duplication in treebuild.ngg */
 const char * nlg_tree_add_rule(
 	NanTreeNode * root, NlexHandle * nh, const char * pattern, char * action);
-void nlg_gen_fastkw_selection(NanTreeNode * root);
+void nlg_gen_fastkw_selection_strcmp(NanTreeNode * root);
+void nlg_gen_fastkw_selection_trie(NanTreeNode * root);
 void nlg_tree_init_root(NanTreeNode * root);
 
 static inline void

@@ -159,7 +159,10 @@ int main(int argc, char * argv[])
 					nlg_gen_fastkw_onid(&troot);
 		fprintf(fpout,
 				"} else if(couldbekw) {\n");
-					nlg_gen_fastkw_selection(&troot);
+		if(fastkeywords_use_strcmp)
+			nlg_gen_fastkw_selection_strcmp(&troot);
+		else
+			nlg_gen_fastkw_selection_trie(&troot);
 		fprintf(fpout,
 				"} else {\n"
 					"nh->bufptr = nh->buf + nh->curtokpos - 1;\n"
