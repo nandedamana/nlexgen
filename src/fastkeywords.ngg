@@ -13,6 +13,7 @@ var fastkeywords_enabled bool
 
 // TODO clopt for customization (also, add to tests)
 var fastkeywords_use_strcmp bool
+var fastkeywords_use_length_based_trie bool / true
 
 var idactnode NanTreeNode
 
@@ -23,7 +24,34 @@ class TrieNode
 	var action      string
 	var ch          char // don't care for root
 	
-	fun add takes key string, keyoffset int, action string
+	// Only for the direct children of the root, that too if the trie has
+	// a length-based branching
+	var keylen      size
+
+	// lengthwise can be optionally true, but use only for direct calls
+	// (i.e., at root)
+	fun add takes key string, keyoffset int, action string, lengthwise bool
+		if lengthwise
+			var klen / =strlen/[key]
+			assert gt klen 0
+
+			for chld through first-child
+				if eq keylen\chld klen
+					break;;
+			;
+
+			if or (no chld) (ne keylen\chld klen)
+				==chld new TrieNode
+				==keylen\chld klen
+				=append\this/[chld]
+			;
+			
+			=add\chld/[key, keyoffset, action, false]
+			return
+		;
+
+		// Proceed with character-based insertion
+
 		// base condition for recursion
 		if eq c'\0' ..keyoffset\key
 			assert no action\this
@@ -44,7 +72,7 @@ class TrieNode
 			=append\this/[chld]
 		;
 
-		=add\chld/[key, sum keyoffset 1, action]
+		=add\chld/[key, sum keyoffset 1, action, false]
 	;
 	
 	fun append takes chld TrieNode
@@ -90,6 +118,17 @@ fun fastkeywords_trie_new gives TrieNode
 ;
 
 fun fastkeywords_trie_to_code takes root TrieNode, level int, fp stream
+	if fastkeywords_use_length_based_trie
+		=fastkeywords_trie_to_code_lengthwise/[root,level, fp];;
+	else
+		=fastkeywords_trie_to_code_not_lengthwise/[root,level, fp];;
+;
+
+fun fastkeywords_trie_to_code_not_lengthwise
+		takes root TrieNode, level int, fp stream
+
+	assert eq keylen\root 0
+
 	=fprintf/[fp, 'if(nh->curtoklen > %d) {\n', level]
 
 	for chld through first-child\root
@@ -106,8 +145,43 @@ fun fastkeywords_trie_to_code takes root TrieNode, level int, fp stream
 
 		=fastkeywords_trie_to_code/[chld, sum level 1, fp]
 		=fprintf/[fp,
-			'} /* END if(nh->buf[nh->curtokpos + %d] == %d) { */ \n', level, ch\chld]
+			'} /* END if(nh->buf[nh->curtokpos + %d] == %d) { */\n', level, ch\chld]
 	;
 	
 	=fprintf/[fp, '} /* END if(nh->curtoklen > %d) */\n', level]
+;
+
+fun fastkeywords_trie_to_code_lengthwise
+		takes root TrieNode, level int, fp stream
+
+	=fputs/['switch(nh->curtoklen) {\n', fp]
+
+	for chld through first-child\root
+		assert gt keylen\chld 0
+		
+		=fprintf/[fp, 'case %zu:\n', keylen\chld]
+		=fastkeywords_trie_to_code_lengthwise_nonroot/[chld, level, fp]
+		=fputs/['break;\n', fp]
+	;
+
+	=fputs/['} /* switch(nh->curtoklen) */\n', fp]
+;
+
+fun fastkeywords_trie_to_code_lengthwise_nonroot
+		takes root TrieNode, level int, fp stream
+	
+	for chld through first-child\root
+		if ne chld first-child\root
+			=fputs/['else ', fp];;
+		
+		=fprintf/[fp, 'if(nh->buf[nh->curtokpos + %d] == %d) {\n', level, ch\chld]
+
+		if action\chld
+			=fprintf/[fp, '\n%s\ngoto after_fastkw;\n', action\chld]
+		;
+
+		=fastkeywords_trie_to_code_lengthwise_nonroot/[chld, sum level 1, fp]
+		=fprintf/[fp,
+			'} /* END if(nh->buf[nh->curtokpos + %d] == %d) */\n', level, ch\chld]
+	;
 ;

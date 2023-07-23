@@ -144,7 +144,6 @@ int main(int argc, char * argv[])
 		fprintf(fpout,
 			"_Bool couldbekw = 0;\n"
 			"_Bool couldbeid = 0;\n"
-			"char * bufptrbak = nh->bufptr;\n"
 			// 'v' not accepted because it could start v, vh and vtop lines (ngg)
 			"if( islower(ch = nlex_next(nh)) && ch != 'v' ) {\n"
 				"while(islower(ch)) { nh->curtoklen++; ch = nlex_next(nh); }\n"

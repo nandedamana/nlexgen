@@ -9,12 +9,41 @@
 
 _Bool fastkeywords_enabled;
 _Bool fastkeywords_use_strcmp;
+_Bool fastkeywords_use_length_based_trie = true;
 NanTreeNode *idactnode;
-void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char * action)
+void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char * action, _Bool lengthwise)
 {
 	TrieNode *chld;
+	if(lengthwise) {
+		TrieNode *chld;
+		size_t klen = strlen(key);
+		assert(klen > 0); /* fastkeywords.ngg:36 */
+		chld = this->first_child;
+		while(chld) {
+			if(chld->keylen == klen) {
+				break;
+			}
+
+			chld = trie_node_get_next(chld);
+		}
+
+		if((!chld) || (chld->keylen != klen)) {
+
+			TrieNode * _ngg_tmp_1 = malloc(sizeof(TrieNode));
+			if(_ngg_tmp_1 == NULL) { perror(NULL); exit(EXIT_FAILURE); }
+			trie_node_construct(_ngg_tmp_1);
+			chld = _ngg_tmp_1;
+			chld->keylen = klen;
+			trie_node_append(this, chld);
+		}
+
+		trie_node_add(chld, key, keyoffset, action, false);
+
+		return ;
+	}
+
 	if('\0' == key[keyoffset]) {
-		assert(!this->action); /* fastkeywords.ngg:29 */
+		assert(!this->action); /* fastkeywords.ngg:57 */
 		this->action = action;
 
 		return ;
@@ -31,25 +60,25 @@ void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char *
 
 	if((!chld) || (chld->ch != key[keyoffset])) {
 
-		TrieNode * _ngg_tmp_1 = malloc(sizeof(TrieNode));
-		if(_ngg_tmp_1 == NULL) { perror(NULL); exit(EXIT_FAILURE); }
-		trie_node_construct(_ngg_tmp_1);
-		chld = _ngg_tmp_1;
+		TrieNode * _ngg_tmp_2 = malloc(sizeof(TrieNode));
+		if(_ngg_tmp_2 == NULL) { perror(NULL); exit(EXIT_FAILURE); }
+		trie_node_construct(_ngg_tmp_2);
+		chld = _ngg_tmp_2;
 		chld->ch = key[keyoffset];
 		trie_node_append(this, chld);
 	}
 
-	trie_node_add(chld, key, keyoffset + 1, action);
+	trie_node_add(chld, key, keyoffset + 1, action, false);
 }
 
 void trie_node_append(TrieNode *this, TrieNode *chld)
 {
 	if(!this->first_child) {
-		assert(!this->last_child); /* fastkeywords.ngg:52 */
+		assert(!this->last_child); /* fastkeywords.ngg:80 */
 		this->first_child = chld;
 		this->last_child = chld;
 	} else {
-		assert(this->last_child); /* fastkeywords.ngg:57 */
+		assert(this->last_child); /* fastkeywords.ngg:85 */
 		this->last_child->sibling = chld;
 		this->last_child = chld;
 	}
@@ -63,6 +92,7 @@ TrieNode* trie_node_get_next(TrieNode *this)
 
 void trie_node_construct(TrieNode *this)
 {
+	this->keylen = 0;
 	this->ch = 0;
 	this->action = NULL;
 	this->sibling = NULL;
@@ -125,15 +155,26 @@ _Bool is_fastkeyword(const char * pattern)
 TrieNode* fastkeywords_trie_new()
 {
 
-	TrieNode * _ngg_tmp_2 = malloc(sizeof(TrieNode));
-	if(_ngg_tmp_2 == NULL) { perror(NULL); exit(EXIT_FAILURE); }
-	trie_node_construct(_ngg_tmp_2);
-	return _ngg_tmp_2;
+	TrieNode * _ngg_tmp_3 = malloc(sizeof(TrieNode));
+	if(_ngg_tmp_3 == NULL) { perror(NULL); exit(EXIT_FAILURE); }
+	trie_node_construct(_ngg_tmp_3);
+	return _ngg_tmp_3;
 }
 
 void fastkeywords_trie_to_code(TrieNode *root, int level, FILE * fp)
 {
+	if(fastkeywords_use_length_based_trie) {
+		fastkeywords_trie_to_code_lengthwise(root, level, fp);
+	} else {
+		fastkeywords_trie_to_code_not_lengthwise(root, level, fp);
+	}
+
+}
+
+void fastkeywords_trie_to_code_not_lengthwise(TrieNode *root, int level, FILE * fp)
+{
 	TrieNode *chld;
+	assert(root->keylen == 0); /* fastkeywords.ngg:130 */
 	fprintf(fp, "if(nh->curtoklen > %d) {\n", level);
 	chld = root->first_child;
 	while(chld) {
@@ -147,10 +188,47 @@ void fastkeywords_trie_to_code(TrieNode *root, int level, FILE * fp)
 		}
 
 		fastkeywords_trie_to_code(chld, level + 1, fp);
-		fprintf(fp, "} /* END if(nh->buf[nh->curtokpos + %d] == %d) { */ \n", level, chld->ch);
+		fprintf(fp, "} /* END if(nh->buf[nh->curtokpos + %d] == %d) { */\n", level, chld->ch);
 		chld = trie_node_get_next(chld);
 	}
 
 	fprintf(fp, "} /* END if(nh->curtoklen > %d) */\n", level);
+}
+
+void fastkeywords_trie_to_code_lengthwise(TrieNode *root, int level, FILE * fp)
+{
+	TrieNode *chld;
+	fputs("switch(nh->curtoklen) {\n", fp);
+	chld = root->first_child;
+	while(chld) {
+		assert(chld->keylen > 0); /* fastkeywords.ngg:160 */
+		fprintf(fp, "case %zu:\n", chld->keylen);
+		fastkeywords_trie_to_code_lengthwise_nonroot(chld, level, fp);
+		fputs("break;\n", fp);
+		chld = trie_node_get_next(chld);
+	}
+
+	fputs("} /* switch(nh->curtoklen) */\n", fp);
+}
+
+void fastkeywords_trie_to_code_lengthwise_nonroot(TrieNode *root, int level, FILE * fp)
+{
+	TrieNode *chld;
+	chld = root->first_child;
+	while(chld) {
+		if(chld != root->first_child) {
+			fputs("else ", fp);
+		}
+
+		fprintf(fp, "if(nh->buf[nh->curtokpos + %d] == %d) {\n", level, chld->ch);
+		if(chld->action) {
+			fprintf(fp, "\n%s\ngoto after_fastkw;\n", chld->action);
+		}
+
+		fastkeywords_trie_to_code_lengthwise_nonroot(chld, level + 1, fp);
+		fprintf(fp, "} /* END if(nh->buf[nh->curtokpos + %d] == %d) */\n", level, chld->ch);
+		chld = trie_node_get_next(chld);
+	}
+
 }
 

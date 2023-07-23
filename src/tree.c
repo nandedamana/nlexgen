@@ -257,7 +257,8 @@ void nlg_gen_fastkw_selection_trie(NanTreeNode * root)
 	for(NanTreeNode * tptr = root->first_child; tptr; tptr = tptr->sibling) {
 		if(tptr->fastkw_pattern)
 			trie_node_add(trieroot,
-				tptr->fastkw_pattern, 0, nan_treenode_get_actstr(tptr));
+				tptr->fastkw_pattern, 0, nan_treenode_get_actstr(tptr),
+				fastkeywords_use_length_based_trie);
 	}
 
 	fastkeywords_trie_to_code(trieroot, 0, fpout);
