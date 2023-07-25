@@ -7,6 +7,8 @@ extern _Bool fastkeywords_enabled;
 extern _Bool fastkeywords_use_strcmp;
 extern _Bool fastkeywords_use_length_based_trie;
 extern _Bool fastkeywords_fuse_single_child;
+extern _Bool fastkeywords_fuse_as_int;
+extern _Bool big_endian;
 extern NanTreeNode *idactnode;
 typedef struct TrieNode TrieNode;
 typedef struct _ngg_vtab_t_TrieNode {
@@ -37,6 +39,7 @@ void fastkeywords_trie_to_code_lengthwise(TrieNode *root, int level, FILE * fp);
 void fastkeywords_trie_to_code_lengthwise_nonroot(TrieNode *root, int level, FILE * fp);
 void fastkeywords_trie_to_code_lengthwise_nonroot_nofuse_single_child(TrieNode *root, int level, FILE * fp);
 void fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child(TrieNode *root, int level, FILE * fp);
-void fuse_single_children(TrieNode *root, int level, FILE * fp);
+int count_single_children(TrieNode *root);
+void fuse_single_children(TrieNode *root, int level, _Bool use_hex, FILE * fp);
 
 #endif /* _N96E_LEX_FASTKEYWORDS_H */

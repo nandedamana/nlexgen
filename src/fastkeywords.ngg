@@ -16,6 +16,14 @@ var fastkeywords_use_strcmp bool
 var fastkeywords_use_length_based_trie bool / true
 var fastkeywords_fuse_single_child bool / true
 
+// Not portable due to the size difference of integer types,
+// not even efficient sometimes due to unaligned memory access
+var fastkeywords_fuse_as_int bool
+var big-endian bool; // =true untested
+
+// TODO if fastkeywords_fuse_as_int = true, there should be one-time assertions
+// to make sure int type lengths and endianness
+
 var idactnode NanTreeNode
 
 class TrieNode
@@ -210,8 +218,39 @@ fun fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child
 			=fputs/['else ', fp];;
 		
 		if not cond-printed\chld
-			=fprintf/[fp, 'if(nh->buf[nh->curtokpos + %d] == \'%c\'', level, ch\chld]
-			=fuse_single_children/[chld, sum level 1, fp]
+			var nschld / 0
+		
+			if fastkeywords_fuse_as_int
+				==nschld =count_single_children/[chld]
+			;
+			
+			var use-hex / true
+
+			switch nschld
+			case 1
+				=fprintf/[fp, 'if(*((short *) (nh->buf + nh->curtokpos + %d)) == ', level];;
+			case 3
+				=fprintf/[fp, 'if(*((int *) (nh->buf + nh->curtokpos + %d)) == ', level];;
+			case 7
+				=fprintf/[fp, 'if(*((long *) (nh->buf + nh->curtokpos + %d)) == ', level];;
+			default
+				=fprintf/[fp, 'if(nh->buf[nh->curtokpos + %d] == \'%c\'', level, ch\chld]
+				==use-hex false
+			;
+
+			if use-hex
+				if big-endian
+					=fprintf/[fp, '0x%2x', ch\chld];;
+				else
+					=fprintf/[fp, '0x', ch\chld];;
+			;
+
+			=fuse_single_children/[chld, sum level 1, use-hex, fp]
+
+			// Reverse order for little-endian
+			if and use-hex not big-endian
+				=fprintf/[fp, '%2x', ch\chld];;
+
 			=fputs/[') {\n', fp]
 		;
 
@@ -222,18 +261,39 @@ fun fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child
 		=fastkeywords_trie_to_code_lengthwise_nonroot/[chld, sum level 1, fp]
 
 		if not cond-printed\chld
-			=fprintf/[fp,
-				'} /* END if(nh->buf[nh->curtokpos + %d] == \'%c\') */\n', level, ch\chld]
+			if fastkeywords_fuse_single_child
+				=fputs/['}\n', fp];;
+			else
+				=fprintf/[fp,
+					'} /* END if(nh->buf[nh->curtokpos + %d] == \'%c\') */\n',
+					level, ch\chld];;
 		;
 	;
 ;
 
-fun fuse_single_children takes root TrieNode, level int, fp stream
+fun count_single_children gives int takes root TrieNode
 	if and first-child\root (no sibling\first-child\root)
-		=fprintf/[fp,
-			' && nh->buf[nh->curtokpos + %d] == \'%c\'', level, ch\first-child\root]
+		return sum =count_single_children/[first-child\root] 1;;
+
+	return 0
+;
+
+fun fuse_single_children takes root TrieNode, level int, use-hex bool, fp stream
+	if and first-child\root (no sibling\first-child\root)
+		if and (use-hex) (not big-endian)
+			=fuse_single_children/[first-child\root, sum level 1, use-hex, fp];;
+
+		if use-hex
+			=fprintf/[fp, '%2x', ch\first-child\root];;
+		else
+			=fprintf/[fp,
+				' && nh->buf[nh->curtokpos + %d] == \'%c\'',
+				level, ch\first-child\root];;
 
 		==cond-printed\first-child\root true
-		=fuse_single_children/[first-child\root, sum level 1, fp]
+		
+		// Preorder for non-int fusing and big-endian int fusing
+		if or (not use-hex) (big-endian)
+			=fuse_single_children/[first-child\root, sum level 1, use-hex, fp];;
 	;
 ;
