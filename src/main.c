@@ -35,6 +35,9 @@ int main(int argc, char * argv[])
 	
 		while(++i < argc) {
 			if(0 == strcmp(argv[i], "--fastkeywords")) {
+				// TODO FIXME
+				nlex_die("fastkeywords is disabled because the generated code does not make sure the buffer is long enough before accessing it using `nh->buf[nh->curtokpos + n]`.");
+			
 				clopt_fastkw = true;
 			}
 			else if(0 == strcmp(argv[i], "--no-simplify")) {
