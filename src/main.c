@@ -18,6 +18,7 @@ int main(int argc, char * argv[])
 	bool simplify = true;
 	char * outpath_gv = NULL;
 	bool clopt_fastkw = false;
+	bool do_consume_callback = true;
 	
 	// XXX Implemented and tested on 2023-04-07; no performance gain because:
 	// 1) The current implementation was already using nested ifs to reduce comparison
@@ -42,6 +43,9 @@ int main(int argc, char * argv[])
 			}
 			else if(0 == strcmp(argv[i], "--no-simplify")) {
 				simplify = false;
+			}
+			else if(0 == strcmp(argv[i], "--no-consume-callback")) {
+				do_consume_callback = false;
 			}
 			else if(0 == strcmp(argv[i], "--gv")) {
 				i++;
@@ -259,7 +263,7 @@ int main(int argc, char * argv[])
 				"nh->curtoklen = lastmatchat - nh->curtokpos - ch_read_after_accept + 1;\n"
 				"assert(nh->curtoklen > 0);\n"
 				"switch(nh->last_accepted_state) {\n");
-	nan_tree_astates_to_code(&troot);
+	nan_tree_astates_to_code(&troot, do_consume_callback);
 	fprintf(fpout,
 				"}\n");
 

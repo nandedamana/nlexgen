@@ -185,7 +185,7 @@ void nan_inode_to_code_kleene_skipping(NanTreeNode * node)
 	}
 }
 
-void nan_tree_astates_to_code(NanTreeNode * root)
+void nan_tree_astates_to_code(NanTreeNode * root, bool do_consume_callback)
 {
 	NanTreeNode * tptr;
 
@@ -195,20 +195,25 @@ void nan_tree_astates_to_code(NanTreeNode * root)
 		root->visited = true;
 
 	if(root->ch == NLEX_CASE_ACT) {
-		fprintf(fpout, "case %u:\n"
-			"\tif(nh->on_consume)\n"
-			"\t\tnh->on_consume(nh, nh->curtokpos, nh->curtoklen);\n\n"
+		fprintf(fpout, "case %u:\n",
+			nan_tree_node_id(root));
 
+		if(do_consume_callback) {
+			fprintf(fpout,
+				"\tif(nh->on_consume)\n"
+				"\t\tnh->on_consume(nh, nh->curtokpos, nh->curtoklen);\n\n");
+		}
+
+		fprintf(fpout,
 			"\t%s\n"
 			"\tbreak;\n",
-			nan_tree_node_id(root),
 			nan_treenode_get_actstr(root));
 
 		return;
 	}
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
-		nan_tree_astates_to_code(tptr);
+		nan_tree_astates_to_code(tptr, do_consume_callback);
 }
 
 void nlg_gen_fastkw_onid(NanTreeNode * root)

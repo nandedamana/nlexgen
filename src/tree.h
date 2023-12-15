@@ -223,7 +223,7 @@ static inline void
 }
 
 /* Conversion of action nodes */
-void nan_tree_astates_to_code(NanTreeNode * root);
+void nan_tree_astates_to_code(NanTreeNode * root, bool do_consume_callback);
 
 const char * nlg_build_tree(NanTreeNode * root, NlexHandle * nh);
 
