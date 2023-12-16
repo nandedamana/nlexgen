@@ -55,6 +55,10 @@ int main(int argc, char * argv[])
 			
 				outpath_gv = argv[i];
 			}
+			// The patterns all are static keywords (no wildcard or anything), the buffer being lexed is a NUL-string
+			else if(0 == strcmp(argv[i], "--zstr2deterkw")) {
+				zstr2deterkw = true;
+			}
 			else if(0 == strcmp(argv[i], "--x-use-jump-table")) {
 				use_jmptab = true;
 			}
@@ -137,15 +141,32 @@ int main(int argc, char * argv[])
 // something similar. Check. I think splitting the loop would
 // be a further improvement.
 
-	fprintf(fpout,
-		"if(!nlex_end_of_input(nh)) {\n"
-			"char ch = 0;\n"
-			"_Bool ch_set = 0;\n"
-			"size_t ch_read_after_accept = 0;\n"
-			"int lastmatchat = -1;\n"
-			// TODO why aren't these part of reset_states()?
-			"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
-			"nh->curtoklen = 0;\n");
+	if(zstr2deterkw) {
+		fprintf(fpout,
+				"nh->curstate = %d;\n",
+				troot.id);
+
+
+		fprintf(fpout,
+			"nh->curtokpos = 0;\n"
+			"nh->curtoklen = 0;\n"
+			"_Bool reject = 0;\n"
+			"while(!nlex_end_of_input(nh) && nh->last_accepted_state == 0 && !reject) {\n"
+				"char ch = nlex_next(nh);\n"
+				"size_t ch_read_after_accept = 0;\n" /* TODO REM? */
+				"int lastmatchat = -1;\n");
+	}
+	else {
+		fprintf(fpout,
+			"if(!nlex_end_of_input(nh)) {\n"
+				"char ch = 0;\n"
+				"_Bool ch_set = 0;\n"
+				"size_t ch_read_after_accept = 0;\n"
+				"int lastmatchat = -1;\n"
+				// TODO why aren't these part of reset_states()?
+				"nh->curtokpos = nh->bufptr - nh->buf + 1;\n"
+				"nh->curtoklen = 0;\n");
+	}
 
 	if(fastkeywords_enabled) {
 		fprintf(fpout,
@@ -181,42 +202,44 @@ int main(int argc, char * argv[])
 			"}\n");
 	}
 
-	fprintf(fpout,
-			"nlex_reset_states(nh);\n"
-			"nlex_nstack_push(nh, %d);\n",
-			troot.id);
-	fprintf(fpout,
-			"while(!nlex_nstack_is_empty(nh)) {\n");
+	if(!zstr2deterkw) {
+		fprintf(fpout,
+				"nlex_reset_states(nh);\n"
+				"nlex_nstack_push(nh, %d);\n",
+				troot.id);
+		fprintf(fpout,
+				"while(!nlex_nstack_is_empty(nh)) {\n");
 
-#ifdef NLXDEBUG
-	fprintf(fpout,
-				"if(nh->buf && nh->bufptr >= nh->buf)\n" // TODO is the first `nh->buf` needed?
-					"fprintf(stderr, "
-						"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
-				"else\n"
-					"fprintf(stderr, \"nstack:\\n\");\n"
+	#ifdef NLXDEBUG
+		fprintf(fpout,
+					"if(nh->buf && nh->bufptr >= nh->buf)\n" // TODO is the first `nh->buf` needed?
+						"fprintf(stderr, "
+							"\"nstack after the iteration that read %%d ('%%c'):\\n\", nlex_last(nh), nlex_last(nh));\n"
+					"else\n"
+						"fprintf(stderr, \"nstack:\\n\");\n"
 
-				"nlex_nstack_dump(nh);\n");
-#endif
+					"nlex_nstack_dump(nh);\n");
+	#endif
 
-	fprintf(fpout,
-				"nlex_swap_t_n_stacks(nh);\n"
-				"assert(nlex_nstack_is_empty(nh));\n"
-				"if(!nlex_tstack_is_empty(nh)) {\n"
-					"ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++;"
-				"}\n"
-				
-				/* We need to move on even if the input has ended (ch == 0 || ch == EOF)
-				 * since the stacks can have states that do not need any input (like
-				 * the states to select an action.
-				 */
-				
-				"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
-				"while(!nlex_tstack_is_empty(nh)) {\n"
-					"assert(ch_set);\n"
-					"size_t nstack_top_bak = nh->nstack_top;\n"
-					"nh->curstate = nlex_tstack_pop(nh);\n"
-					"if(nh->curstate == 0) continue;\n");
+		fprintf(fpout,
+					"nlex_swap_t_n_stacks(nh);\n"
+					"assert(nlex_nstack_is_empty(nh));\n"
+					"if(!nlex_tstack_is_empty(nh)) {\n"
+						"ch = nlex_next(nh); ch_set = 1; ch_read_after_accept++;"
+					"}\n"
+					
+					/* We need to move on even if the input has ended (ch == 0 || ch == EOF)
+					 * since the stacks can have states that do not need any input (like
+					 * the states to select an action.
+					 */
+					
+					"unsigned int hiprio_act_this_iter = UINT_MAX;\n"
+					"while(!nlex_tstack_is_empty(nh)) {\n"
+						"assert(ch_set);\n"
+						"size_t nstack_top_bak = nh->nstack_top;\n"
+						"nh->curstate = nlex_tstack_pop(nh);\n"
+						"if(nh->curstate == 0) continue;\n");
+	}
 
 #ifdef NLXDEBUG
 	fprintf(fpout,
@@ -239,15 +262,20 @@ int main(int argc, char * argv[])
 		fprintf(fpout, "endjmp:\n");
 	}
 	
-	fprintf(fpout,
-					"if(nh->nstack_top != nstack_top_bak) lastmatchat = (nh->bufptr - nh->buf);\n"
-				"} /* end while tstack */\n"
-				"assert(nlex_tstack_is_empty(nh));\n"
+	if(zstr2deterkw) {
+		// lastmatchat set during the node code generation
+	}
+	else {
+		fprintf(fpout,
+						"if(nh->nstack_top != nstack_top_bak) lastmatchat = (nh->bufptr - nh->buf);\n"
+					"} /* end while tstack */\n"
+					"assert(nlex_tstack_is_empty(nh));\n"
 
-				"if(hiprio_act_this_iter != UINT_MAX) { nh->last_accepted_state = hiprio_act_this_iter; } \n"
-				// TODO REM
-				"//if(ch == EOF || ch == '\\0') { assert(nlex_nstack_is_empty(nh)); break; }\n" // TODO done above too. Why twice?
-			"} /* end while nstack */\n");
+					"if(hiprio_act_this_iter != UINT_MAX) { nh->last_accepted_state = hiprio_act_this_iter; } \n"
+					// TODO REM
+					"//if(ch == EOF || ch == '\\0') { assert(nlex_nstack_is_empty(nh)); break; }\n" // TODO done above too. Why twice?
+				"} /* end while nstack */\n");
+	}
 
 #ifdef NLXDEBUG
 	fprintf(fpout,

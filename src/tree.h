@@ -37,6 +37,8 @@
 extern NanTreeNodeId treebuild_id_lastact;
 extern NanTreeNodeId treebuild_id_lastnonact;
 
+extern bool zstr2deterkw;
+
 /* @param pseudonode True if called for node->klnstate_id_auto */
 void nan_inode_to_code(NanTreeNode * node, bool pseudonode);
 

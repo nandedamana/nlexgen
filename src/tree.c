@@ -15,6 +15,9 @@
 NanTreeNodeId treebuild_id_lastact    = 0;
 NanTreeNodeId treebuild_id_lastnonact = 1; /* First one used for the root */
 
+// TODO I hate this being a global variable
+bool zstr2deterkw = 0;
+
 /* Assuming the siblings are sorted/grouped; check the code before 2023-04-08
  * to see how it's handled otherwise.
  */
@@ -73,19 +76,33 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 	
 	assert(actcount <= 1);
 
+	_Bool if_printed = 0;
+
 	for(tptr = node->first_child; tptr; tptr = tptr->sibling) {
 		if(tptr->ch == NLEX_CASE_ACT) {
 			/* TODO needed only when nlex_nstack_is_empty(nh)?
 			 * why did I write so in the early days?
 			 */
-		
-			fprintf(fpout,
-				"\tif(%u < hiprio_act_this_iter) {\n"
-				"\t\thiprio_act_this_iter = %u;\n",
-				nan_tree_node_id(tptr),
-				nan_tree_node_id(tptr));
 
-			fprintf(fpout, "ch_read_after_accept = 0;\n");
+			if(!zstr2deterkw) {
+				fprintf(fpout,
+					"\tif(%u < hiprio_act_this_iter) {\n"
+					"\t\thiprio_act_this_iter = %u;\n",
+					nan_tree_node_id(tptr),
+					nan_tree_node_id(tptr));
+
+				fprintf(fpout, "ch_read_after_accept = 0;\n");
+			}
+			else {
+				fprintf(fpout,
+					"\tif(ch == '\\0') {\n"
+					"\t\tnh->last_accepted_state = %u;\n"
+					"\t\tlastmatchat = (nh->bufptr - nh->buf - 1);\n" /* Just to satisfy a sanity check later */
+					"\t}\n",
+					nan_tree_node_id(tptr));
+				
+				if_printed = 1;
+			}
 
 			#ifdef NLXDEBUG
 			fprintf(fpout,
@@ -93,13 +110,12 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 				nan_tree_node_id(tptr));
 			#endif
 			
-			fprintf(fpout, "\t}\n");
+			if(!zstr2deterkw)
+				fprintf(fpout, "\t}\n");
 			
 			break;
 		}
 	}
-
-	_Bool if_printed = 0;
 
 	NanTreeNode * sibbak = NULL;
 
@@ -111,7 +127,7 @@ void nan_inode_to_code(NanTreeNode * node, bool pseudonode)
 		if(nan_treenode_is_klndst(tptr))
 			continue;
 
-		if(can_use_else(sibbak)) {
+		if(zstr2deterkw || can_use_else(sibbak)) {
 			if(if_printed)
 				fprintf(fpout, "else ");
 			else
@@ -157,8 +173,13 @@ void nan_inode_to_code_matchbranch(NanTreeNode * tptr)
 
 	fprintf(fpout, " ) {\n");
 
-	/* Push itself onto the next-stack */
-	fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
+	if(zstr2deterkw) {
+		fprintf(fpout, "\tnh->curstate = %u;\n", nan_tree_node_id(tptr));
+	}
+	else {
+		/* Push itself onto the next-stack */
+		fprintf(fpout, "\tnlex_nstack_push(nh, %u);\n", nan_tree_node_id(tptr));
+	}
 
 	fprintf(fpout, "}\n");
 }
@@ -645,6 +666,13 @@ void nan_tree_istates_to_code_switch(NanTreeNode * root)
 
 	fprintf(fpout, "case %u: {\n", nan_tree_node_id(root));
 	nan_inode_to_code(root, false);
+
+	if(zstr2deterkw) {
+		// Important to do this inside every state case to prevent `mode\0` from being accepted as `mod\0`
+		fprintf(fpout,
+			"\telse { reject = 1; }\n");
+	}
+
 	fputs("break; }\n", fpout);
 
 	for(tptr = root->first_child; tptr; tptr = tptr->sibling)
