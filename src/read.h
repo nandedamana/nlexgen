@@ -91,7 +91,8 @@ static inline NlexNString
 	assert(nh->bufptr >= nh->buf);
 
 	ns.buf = nh->buf + offset;
-	ns.len = (len > 0)? len: (nh->bufptr - nh->buf);
+	assert(nh->bufptr >= nh->buf);
+	ns.len = (len > 0)? len: (size_t) (nh->bufptr - nh->buf);
 
 	return ns;
 }
@@ -109,7 +110,7 @@ static inline char *
 }
 
 static inline char *
-	nlex_tokdup(NlexHandle * nh, size_t offset, size_t rtrimlen)
+	nlex_tokdup(NlexHandle * nh, int offset, int rtrimlen)
 {
 	assert(nh->curtoklen > 0);
 
@@ -209,7 +210,7 @@ static inline _Bool nlex_nstack_is_empty(NlexHandle * nh)
 
 static inline void nlex_nstack_dump(NlexHandle * nh)
 {
-	int i;
+	size_t i;
 
 	fprintf(stderr, "nlex nstack [bottom ");
 
@@ -238,7 +239,7 @@ static inline void nlex_nstack_push(NlexHandle * nh, NanTreeNodeId id)
 
 static inline void nlex_nstack_remove(NlexHandle * nh, NanTreeNodeId id)
 {
-	int i;
+	size_t i;
 
 	for(i = 1; i <= nh->nstack_top; i++)
 		if(nh->nstack[i] == id)
@@ -363,7 +364,7 @@ static inline void nlex_swap_t_n_stacks(NlexHandle * nh)
 
 static inline void nlex_tstack_dump(NlexHandle * nh)
 {
-	int i;
+	size_t i;
 
 	fprintf(stderr, "nlex tstack [bottom ");
 

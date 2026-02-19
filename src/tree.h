@@ -213,7 +213,7 @@ static inline void
 	nan_character_list_to_expr(
 		NanCharacterList * ncl, const char * id, FILE * fp)
 {
-	int i;
+	size_t i;
 	
 	if(ncl->count) {
 		nan_character_print_c_comp(ncl->list[0], id, fp);
@@ -308,7 +308,7 @@ static inline bool
 	
 	bool matches = true;
 
-	int i = 0;
+	size_t i = 0;
 	
 	if(nclist1->count !=	nclist2->count) {
 		matches = false;

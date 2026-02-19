@@ -1,4 +1,4 @@
-CFLAGS=-Wall -DNLEX_ITSELF
+CFLAGS=-Wall -Wextra -Wno-unused-parameter -DNLEX_ITSELF
 DEBUGFLAGS=-DDEBUG -g
 OBJS=error.o fastkeywords.o plot.o main.o read.o tree.o treebuild.o tree_types.o types.o
 

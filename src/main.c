@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
 	bool use_jmptab = false;
 
 	if(argc > 1) {
-		size_t i = 0;
+		int i = 0;
 	
 		while(++i < argc) {
 			if(0 == strcmp(argv[i], "--fastkeywords")) {
