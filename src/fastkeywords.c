@@ -328,7 +328,7 @@ void fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child(TrieNode *ro
 				if(big_endian) {
 					fprintf(fp, "0x%2x", chld->ch);
 				} else {
-					fprintf(fp, "0x", chld->ch);
+					fprintf(fp, "0x");
 				}
 			}
 

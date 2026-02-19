@@ -240,7 +240,7 @@ fun fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child
 				if big-endian
 					=fprintf/[fp, '0x%2x', ch\chld];;
 				else
-					=fprintf/[fp, '0x', ch\chld];;
+					=fprintf/[fp, '0x'];;
 			;
 
 			=fuse_single_children/[chld, sum level 1, use-hex, fp]
