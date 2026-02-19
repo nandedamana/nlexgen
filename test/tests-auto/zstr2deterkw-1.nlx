@@ -1,0 +1,3 @@
+int	{ printf("kw:int-"); }
+fun	{ printf("kw:fun-"); }
+function	{ printf("kw:fun-"); }

@@ -35,6 +35,8 @@ fi
 nlxopts=${NLEXFLAGS-}
 if [ "$(echo "$nlxfile"|grep fastkw)" ]; then
 	nlxopts='--fastkeywords'
+elif [ "$(echo "$nlxfile"|grep zstr2deterkw)" ]; then
+	nlxopts='--zstr2deterkw'
 fi
 
 echo '#include <assert.h>' > "$ocfile"
