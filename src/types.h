@@ -1,26 +1,27 @@
 #ifndef _N96E_LEX_TYPES_H
 #define _N96E_LEX_TYPES_H
 
+typedef enum NlexErr NlexErr;
+typedef struct NlexNString NlexNString;
+typedef struct NlexHandle NlexHandle;
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 typedef int NlexCharacter;
-typedef enum NlexErr {
+enum NlexErr {
 	NLEX_ERR_NONE = 0,
 	NLEX_ERR_MALLOC,
 	NLEX_ERR_REALLOC,
 	NLEX_ERR_READING,
-} NlexErr;
+};
 
-typedef struct NlexNString {
+struct NlexNString {
 	const char * buf;
 	size_t len;
-} NlexNString;
+};
 
 typedef unsigned int NanTreeNodeId;
-typedef struct NlexHandle NlexHandle;
-typedef struct _ngg_vtab_t_NlexHandle {
-} _ngg_vtab_t_NlexHandle;
-
-typedef struct NlexHandle {
-	_ngg_vtab_t_NlexHandle _ngg_vtab_nlex_handle;
+struct NlexHandle {
 	size_t buf_alloc_unit;
 	void (*on_error)(NlexHandle *nh, NlexErr err);
 	void (*on_consume)(NlexHandle *nh, size_t offset, size_t len);
@@ -40,10 +41,10 @@ typedef struct NlexHandle {
 	unsigned int *nstack;
 	size_t nstack_top;
 	size_t nstack_allocsiz;
-} NlexHandle;
+};
 
-void nlex_handle_construct(NlexHandle *this);
 void nlex_handle_destruct(NlexHandle *this);
+void nlex_handle_construct(NlexHandle *this);
 NlexNString nlex_n_string_default();
 
 #endif /* _N96E_LEX_TYPES_H */

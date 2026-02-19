@@ -1,9 +1,9 @@
 // tree_types.ngg
 // This file is part of nlexgen, a lexer generator.
-// Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+// Copyright (C) 2019, 2020, 2021, 2026 Nandakumar Edamana
 // File started on 2021-06-06, migrating previously written C code.
 
-refer vector;
+include vector;
 refer 'types.ngg';
 
 /* XXX 'Nan' prefix is used to distinguish internal components from
