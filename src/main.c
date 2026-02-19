@@ -1,8 +1,11 @@
 /* main.c
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023, 2026 Nandakumar Edamana
  * Started on 2019-07-22
  */
+
+#define PROGRAM_NAME "nlexgen"
+#define VERSION "0.2.1"
 
 #include <memory.h>
 
@@ -54,6 +57,10 @@ int main(int argc, char * argv[])
 					nlex_die("No path given after --gv.");
 			
 				outpath_gv = argv[i];
+			}
+			else if(0 == strcmp(argv[i], "--version")) {
+				puts(PROGRAM_NAME" version "VERSION);
+				exit(EXIT_SUCCESS);
 			}
 			// The patterns all are static keywords (no wildcard or anything), the buffer being lexed is a NUL-string
 			else if(0 == strcmp(argv[i], "--zstr2deterkw")) {
