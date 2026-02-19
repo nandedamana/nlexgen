@@ -306,5 +306,8 @@ int main(int argc, char * argv[])
 	fprintf(fpout, "} /* endif not end of input */ \n");
 	/* END Code Generation */
 
+	nlex_handle_destruct(nh);
+	free(nh);
+
 	return 0;
 }

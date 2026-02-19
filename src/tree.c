@@ -513,6 +513,9 @@ nextiter:
 		prvch = ch;
 	}
 
+	nan_tree_node_vector_destruct(subxtailbakvec);
+	free(subxtailbakvec);
+
 	if(in_list)
 		return NLEXERR_LIST_NOT_CLOSED;
 	
