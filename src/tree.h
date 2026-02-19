@@ -1,6 +1,6 @@
 /* tree.h
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023, 2026 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -43,6 +43,7 @@ extern bool zstr2deterkw;
 void nan_inode_to_code(NanTreeNode * node, bool pseudonode);
 
 void nan_inode_to_code_matchbranch(NanTreeNode * tptr);
+void nan_inode_to_code_kleene_skipping(NanTreeNode * node);
 
 static inline void nan_tree_unvisit(NanTreeNode * root)
 {

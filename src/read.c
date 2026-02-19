@@ -1,6 +1,6 @@
 /* read.c
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2026 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -22,25 +22,18 @@ const NlexCharacter escout_c[] = {'\a', '\b', '\f', '\n', '\r', '\t', '\v', '\\'
 
 NlexHandle * nlex_handle_new()
 {
-	NlexHandle * nh;
-	
-	nh = malloc(sizeof(NlexHandle));
+	NlexHandle *nh = malloc(sizeof(NlexHandle));
 	if(!nh)
 		return NULL;
-	
-	nh->buf_alloc_unit = NLEX_DEFT_BUF_ALLOC_UNIT;
-	
-	nh->on_error       = nlex_onerror;
-	nh->on_consume     = NULL;
-	nh->userdata       = NULL;
-	
-	// TODO set fp, buf, etc. to NULL
-	
 	return nh;
 }
 
 void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 {
+	nlex_handle_construct(nh);
+	nh->on_error = nlex_onerror;
+	nh->buf_alloc_unit = NLEX_DEFT_BUF_ALLOC_UNIT;
+
 	/* These two assignments not put inside some branching because
 	 * the one that is not chosen has to be initialized to NULL
 	 * and these two will do that automatically.
@@ -51,20 +44,10 @@ void nlex_init(NlexHandle * nh, FILE * fpi, const char * buf)
 
 	nh->bufptr      = nh->buf - 1;
 	nh->bufendptr   = nh->buf; /* Makes nlex_next() read if fp != NULL */
-	
-	nh->eof_read    = 0;
-	
-	// TODO move to nlex_init()?
-	nh->tstack      = NULL;
-	nh->nstack      = NULL;
-	
 	nh->curtokpos   = -1;
-	nh->curtoklen   = 0;
-
-	nh->last_accepted_state = 0;
 }
 
-void nlex_onerror(NlexHandle * nh, int errno)
+void nlex_onerror(NlexHandle * nh, NlexErr errno)
 {
 	switch(errno) {
 	case NLEX_ERR_MALLOC:

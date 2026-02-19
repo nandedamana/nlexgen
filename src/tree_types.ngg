@@ -12,14 +12,12 @@ refer 'types.ngg';
 
 /* To match multiple characters at a time */
 class NanCharacterList
-	// TODO FIXME ngg doesn't accept alias as a type
-	// var list   array of NlexCharacter;
-	var list   array of int;
-	var count  size;
+	var list  nullable array of NlexCharacter;
+	var count size;
 ;
 
 union NanTreeNodeData
-	var chlist NanCharacterList;
+	var chlist nullable NanCharacterList;
 	var actstr mstring;
 ;
 
@@ -29,7 +27,7 @@ class NanTreeNode
   var ch NlexCharacter;
   
   // Only if the node is a fastkw action node
-  var fastkw_pattern mstring;
+  var fastkw_pattern nullable mstring;
 
   var data NanTreeNodeData;
 
@@ -37,13 +35,13 @@ class NanTreeNode
 	 * if only one node in the Kleene group.)
 	 * NULL for non-Kleene nodes.
 	 */
-	var klnptr           NanTreeNode;
+	var klnptr           nullable NanTreeNode;
 	var klnstate_id_auto NanTreeNodeId;
 
-	var klnptr_from  NanTreeNodeVector;
+	var klnptr_from  nullable NanTreeNodeVector;
 
-	var first_child  NanTreeNode;
-	var sibling      NanTreeNode;
+	var first_child  nullable NanTreeNode;
+	var sibling      nullable NanTreeNode;
 	
 	/* Because this is a graph and a node can have multiple parents */
 	var visited bool;

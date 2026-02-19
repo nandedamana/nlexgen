@@ -24,9 +24,9 @@ var big-endian bool; // =true untested
 var idactnode NanTreeNode
 
 class TrieNode
-	own first-child TrieNode
-	own last-child  TrieNode
-	own sibling     TrieNode
+	own first-child nullable TrieNode
+	own last-child  nullable TrieNode
+	own sibling     nullable TrieNode
 	var action      string
 	var ch          char // don't care for root
 	
@@ -35,6 +35,8 @@ class TrieNode
 	var keylen      size
 
 	var cond-printed bool
+
+	setter set-sibling sets sibling
 
 	// lengthwise can be optionally true, but use only for direct calls
 	// (i.e., at root)
@@ -90,13 +92,12 @@ class TrieNode
 			==last-child  chld
 		;
 		else
-			assert last-child
-			==sibling\last-child chld
-			==last-child         chld
+			=set-sibling\unwrap last-child/[chld]
+			==last-child chld
 		;
 	;
 	
-	fun get-next gives TrieNode
+	fun get-next gives nullable TrieNode
 		return sibling
 	;
 ;
@@ -269,28 +270,31 @@ fun fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child
 ;
 
 fun count_single_children gives int takes root TrieNode
-	if and first-child\root (no sibling\first-child\root)
-		return sum =count_single_children/[first-child\root] 1;;
+	if some first-child\root as fc
+		if no sibling\fc
+			return sum =count_single_children/[fc] 1;;;
 
 	return 0
 ;
 
 fun fuse_single_children takes root TrieNode, level int, use-hex bool, fp stream
-	if and first-child\root (no sibling\first-child\root)
-		if and (use-hex) (not big-endian)
-			=fuse_single_children/[first-child\root, sum level 1, use-hex, fp];;
+	if some first-child\root as fc
+		if no sibling\fc
+			if and (use-hex) (not big-endian)
+				=fuse_single_children/[fc, sum level 1, use-hex, fp];;
 
-		if use-hex
-			=fprintf/[fp, '%2x', ch\first-child\root];;
-		else
-			=fprintf/[fp,
-				' && nh->buf[nh->curtokpos + %d] == \'%c\'',
-				level, ch\first-child\root];;
+			if use-hex
+				=fprintf/[fp, '%2x', ch\fc];;
+			else
+				=fprintf/[fp,
+					' && nh->buf[nh->curtokpos + %d] == \'%c\'',
+					level, ch\fc];;
 
-		==cond-printed\first-child\root true
-		
-		// Preorder for non-int fusing and big-endian int fusing
-		if or (not use-hex) (big-endian)
-			=fuse_single_children/[first-child\root, sum level 1, use-hex, fp];;
+			==cond-printed\fc true
+
+			// Preorder for non-int fusing and big-endian int fusing
+			if or (not use-hex) (big-endian)
+				=fuse_single_children/[fc, sum level 1, use-hex, fp];;
+		;
 	;
 ;

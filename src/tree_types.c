@@ -12,6 +12,7 @@ void nan_character_list_destruct(NanCharacterList *this)
 void nan_character_list_construct(NanCharacterList *this)
 {
 	this->count = 0u;
+	this->list = NULL;
 }
 
 void nan_tree_node_destruct(NanTreeNode *this)
@@ -21,7 +22,12 @@ void nan_tree_node_destruct(NanTreeNode *this)
 void nan_tree_node_construct(NanTreeNode *this)
 {
 	this->visited = false;
+	this->sibling = NULL;
+	this->first_child = NULL;
+	this->klnptr_from = NULL;
 	this->klnstate_id_auto = 0u;
+	this->klnptr = NULL;
+	this->fastkw_pattern = NULL;
 	this->ch = 0;
 	this->id = 0u;
 }

@@ -27,24 +27,26 @@ vh typedef unsigned int NanTreeNodeId;
 shadow function NlexErrCallback     takes nh NlexHandle, err NlexErr;
 shadow function NlexConsumeCallback takes nh NlexHandle, offset size, len size;
 
+shadow fun get_NLEX_DEFT_BUF_ALLOC_UNIT gives size;
+
 class NlexHandle
 	// Parameters that can only be set before calling nlex_init()
 	// (if unset, will be initialized by nlex_init())
 	var buf_alloc_unit size;
 	
 	// Parameters that can be set anytime
-	var on_error     NlexErrCallback;
-	var on_consume   NlexConsumeCallback;
-	var userdata     pointer;
+	var on_error     nullable NlexErrCallback
+	var on_consume   nullable NlexConsumeCallback
+	var userdata     nullable pointer
 
 	// Set by nlex_init()
-	var fp  stream;
-	var buf mstring;
+	var fp  nullable stream;
+	var buf nullable mstring;
 	
 	// Everything below are set and modified by the lexer
 	
-	var bufptr       mstring; // Points to the character in consideration
-	var bufendptr    mstring; // Where the next block of the input can be appended
+	var bufptr       nullable mstring; // Points to the character in consideration
+	var bufendptr    nullable mstring; // Where the next block of the input can be appended
 	
 	var curtokpos int;
 	
@@ -63,12 +65,14 @@ class NlexHandle
 	// this iteration and the next).
 	// size_t chosen because currently states are identified using compile-time
 	// addresses.
-//	var tstack         array of NanTreeNodeId;
-	var tstack array of uint; // TODO FIXME
+	var tstack nullable array of NanTreeNodeId
 	var tstack_top     size; // 0 => empty, 1 is the bottom
 	var tstack_allocsiz size;
-//	var nstack         array of NanTreeNodeId;
-	var nstack array of uint; // TODO FIXME
+	var nstack nullable array of NanTreeNodeId
 	var nstack_top     size;
 	var nstack_allocsiz size;
+
+	fun $construct
+		==buf_alloc_unit 1024
+	;
 ;

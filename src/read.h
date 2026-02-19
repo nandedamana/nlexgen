@@ -1,6 +1,6 @@
 /* read.h
  * This file is part of nlexgen, a lexer generator.
- * Copyright (C) 2019, 2020, 2021, 2023 Nandakumar Edamana
+ * Copyright (C) 2019, 2020, 2021, 2023, 2026 Nandakumar Edamana
  * Started on 2019-07-22
  */
 
@@ -310,7 +310,7 @@ static inline int nlex_next(NlexHandle * nh)
 	return *(nh->bufptr);
 }
 
-void nlex_onerror(NlexHandle * nh, int errno);
+void nlex_onerror(NlexHandle * nh, NlexErr errno);
 
 static inline void nlex_reset_states(NlexHandle * nh)
 {

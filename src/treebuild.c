@@ -114,9 +114,9 @@ _ngg_tuple_nlg_get_rule nlg_get_rule(NlexHandle *nh)
 	_Bool escaped = false;
 
 	while(true) {
-		int ch = nlex_next(nh);
+		int chraw = nlex_next(nh);
 
-		if((((ch == '\r') || (ch == '\n')) || (ch == EOF)) || (ch == '\0')) {
+		if((((chraw == '\r') || (chraw == '\n')) || (chraw == EOF)) || (chraw == '\0')) {
 			if(vstring_get_length(vspat) > 0) {
 				if(vspat) {
 					vstring_destruct(vspat);
@@ -144,6 +144,8 @@ _ngg_tuple_nlg_get_rule nlg_get_rule(NlexHandle *nh)
 			}
 		}
 
+		char ch = unwrap_char(chraw);
+
 		if(ch == '[') {
 			if(!escaped) {
 				in_list = true;
@@ -163,13 +165,13 @@ _ngg_tuple_nlg_get_rule nlg_get_rule(NlexHandle *nh)
 		if(ch == '\t') {
 			break;
 		} else if((ch == ' ') && (!in_list)) {
-			while(nlex_next(nh) == ' ') {
+			while(nlex_next(nh) == ((int) ' ')) {
 			}
 
 			break;
 		}
 
-		vstring_appendc(vspat, unwrap_char(ch));
+		vstring_appendc(vspat, ch);
 	}
 
 	vstring_appendc(vsact, nlex_last(nh));
@@ -224,8 +226,8 @@ const char * nlg_build_tree(NanTreeNode *root, NlexHandle *nh)
 			return NLEXERR_SUCCESS;
 		}
 
-		assert(pat); /* treebuild.ngg:101 */
-		assert(act); /* treebuild.ngg:101 */
+		assert(pat); /* treebuild.ngg:102 */
+		assert(act); /* treebuild.ngg:102 */
 
 		err = nlg_tree_add_rule(root, nh, pat, act);
 		if(NLEXERR_SUCCESS != err) {
@@ -246,6 +248,6 @@ const char * nlg_build_tree(NanTreeNode *root, NlexHandle *nh)
 
 char unwrap_char(int ch)
 {
-	assert(ch >= 0 && ch <= 255); /* treebuild.ngg:112 */
+	assert(ch >= 0 && ch <= 255); /* treebuild.ngg:113 */
 	return (char) ch;
 }

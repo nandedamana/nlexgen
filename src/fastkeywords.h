@@ -24,6 +24,7 @@ struct TrieNode {
 	_Bool cond_printed;
 };
 
+void trie_node_set_sibling(TrieNode *this, TrieNode *sibling_in);
 void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char * action, _Bool lengthwise);
 void trie_node_append(TrieNode *this, TrieNode *chld);
 TrieNode * trie_node_get_next(TrieNode *this);

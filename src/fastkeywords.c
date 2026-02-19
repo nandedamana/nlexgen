@@ -15,6 +15,17 @@ _Bool fastkeywords_fuse_as_int;
 _Bool big_endian;
 NanTreeNode *idactnode;
 
+void trie_node_set_sibling(TrieNode *this, TrieNode *sibling_in)
+{
+	TrieNode *_ngg_tmp_1 = sibling_in;
+	if(this->sibling) {
+		trie_node_destruct((TrieNode *) this->sibling);
+		free(this->sibling);
+	}
+
+	this->sibling = _ngg_tmp_1;
+}
+
 void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char * action, _Bool lengthwise)
 {
 	TrieNode *chld;
@@ -22,7 +33,7 @@ void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char *
 		TrieNode *chld;
 		size_t klen = strlen(key);
 
-		assert(klen > 0); /* fastkeywords.ngg:44 */
+		assert(klen > 0); /* fastkeywords.ngg:46 */
 
 		chld = this->first_child;
 		while(chld) {
@@ -51,7 +62,7 @@ void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char *
 	}
 
 	if('\0' == key[keyoffset]) {
-		assert(!this->action); /* fastkeywords.ngg:65 */
+		assert(!this->action); /* fastkeywords.ngg:67 */
 
 		this->action = action;
 		return;
@@ -85,33 +96,27 @@ void trie_node_add(TrieNode *this, const char * key, int keyoffset, const char *
 void trie_node_append(TrieNode *this, TrieNode *chld)
 {
 	if(!this->first_child) {
-		assert(!this->last_child); /* fastkeywords.ngg:88 */
-		TrieNode *_ngg_tmp_1 = chld;
+		assert(!this->last_child); /* fastkeywords.ngg:90 */
+		TrieNode *_ngg_tmp_2 = chld;
 		if(this->first_child) {
-			trie_node_destruct(this->first_child);
+			trie_node_destruct((TrieNode *) this->first_child);
 			free(this->first_child);
 		}
 
-		this->first_child = _ngg_tmp_1;
-		TrieNode *_ngg_tmp_2 = chld;
+		this->first_child = _ngg_tmp_2;
+		TrieNode *_ngg_tmp_3 = chld;
 		if(this->last_child) {
-			trie_node_destruct(this->last_child);
+			trie_node_destruct((TrieNode *) this->last_child);
 			free(this->last_child);
 		}
 
-		this->last_child = _ngg_tmp_2;
+		this->last_child = _ngg_tmp_3;
 	} else {
-		assert(this->last_child); /* fastkeywords.ngg:93 */
-		TrieNode *_ngg_tmp_3 = chld;
-		if(this->last_child->sibling) {
-			trie_node_destruct(this->last_child->sibling);
-			free(this->last_child->sibling);
-		}
-
-		this->last_child->sibling = _ngg_tmp_3;
+		assert(this->last_child);
+		trie_node_set_sibling(this->last_child, chld);
 		TrieNode *_ngg_tmp_4 = chld;
 		if(this->last_child) {
-			trie_node_destruct(this->last_child);
+			trie_node_destruct((TrieNode *) this->last_child);
 			free(this->last_child);
 		}
 
@@ -127,17 +132,17 @@ TrieNode * trie_node_get_next(TrieNode *this)
 void trie_node_destruct(TrieNode *this)
 {
 	if(this->first_child) {
-		trie_node_destruct(this->first_child);
+		trie_node_destruct((TrieNode *) this->first_child);
 		free(this->first_child);
 	}
 
 	if(this->last_child) {
-		trie_node_destruct(this->last_child);
+		trie_node_destruct((TrieNode *) this->last_child);
 		free(this->last_child);
 	}
 
 	if(this->sibling) {
-		trie_node_destruct(this->sibling);
+		trie_node_destruct((TrieNode *) this->sibling);
 		free(this->sibling);
 	}
 }
@@ -148,6 +153,9 @@ void trie_node_construct(TrieNode *this)
 	this->keylen = 0u;
 	this->ch = '\0';
 	this->action = "";
+	this->sibling = NULL;
+	this->last_child = NULL;
+	this->first_child = NULL;
 }
 
 void fastkeywords_init(_Bool enabled)
@@ -201,7 +209,7 @@ void fastkeywords_trie_to_code(TrieNode *root, int level, FILE * fp)
 void fastkeywords_trie_to_code_not_lengthwise(TrieNode *root, int level, FILE * fp)
 {
 	TrieNode *chld;
-	assert(root->keylen == 0); /* fastkeywords.ngg:138 */
+	assert(root->keylen == 0); /* fastkeywords.ngg:139 */
 
 	fprintf(fp, "if(nh->curtoklen > %d) {\n", level);
 
@@ -232,7 +240,7 @@ void fastkeywords_trie_to_code_lengthwise(TrieNode *root, int level, FILE * fp)
 
 	chld = root->first_child;
 	while(chld) {
-		assert(chld->keylen > 0); /* fastkeywords.ngg:168 */
+		assert(chld->keylen > 0); /* fastkeywords.ngg:169 */
 
 		fprintf(fp, "case %zu:\n", chld->keylen);
 		fastkeywords_trie_to_code_lengthwise_nonroot(chld, level, fp);
@@ -353,8 +361,12 @@ void fastkeywords_trie_to_code_lengthwise_nonroot_fuse_single_child(TrieNode *ro
 
 int count_single_children(TrieNode *root)
 {
-	if(root->first_child && (!root->first_child->sibling)) {
-		return count_single_children(root->first_child) + 1;
+	if(root->first_child) {
+		TrieNode *fc;
+		fc = (TrieNode *) root->first_child;
+		if(!fc->sibling) {
+			return count_single_children(fc) + 1;
+		}
 	}
 
 	return 0;
@@ -362,21 +374,25 @@ int count_single_children(TrieNode *root)
 
 void fuse_single_children(TrieNode *root, int level, _Bool use_hex, FILE * fp)
 {
-	if(root->first_child && (!root->first_child->sibling)) {
-		if(use_hex && (!big_endian)) {
-			fuse_single_children(root->first_child, level + 1, use_hex, fp);
-		}
+	if(root->first_child) {
+		TrieNode *fc;
+		fc = (TrieNode *) root->first_child;
+		if(!fc->sibling) {
+			if(use_hex && (!big_endian)) {
+				fuse_single_children(fc, level + 1, use_hex, fp);
+			}
 
-		if(use_hex) {
-			fprintf(fp, "%2x", root->first_child->ch);
-		} else {
-			fprintf(fp, " && nh->buf[nh->curtokpos + %d] == \'%c\'", level, root->first_child->ch);
-		}
+			if(use_hex) {
+				fprintf(fp, "%2x", fc->ch);
+			} else {
+				fprintf(fp, " && nh->buf[nh->curtokpos + %d] == \'%c\'", level, fc->ch);
+			}
 
-		root->first_child->cond_printed = true;
+			fc->cond_printed = true;
 
-		if((!use_hex) || big_endian) {
-			fuse_single_children(root->first_child, level + 1, use_hex, fp);
+			if((!use_hex) || big_endian) {
+				fuse_single_children(fc, level + 1, use_hex, fp);
+			}
 		}
 	}
 }

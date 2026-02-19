@@ -43,8 +43,8 @@ struct NlexHandle {
 	size_t nstack_allocsiz;
 };
 
-void nlex_handle_destruct(NlexHandle *this);
 void nlex_handle_construct(NlexHandle *this);
+void nlex_handle_destruct(NlexHandle *this);
 NlexNString nlex_n_string_default();
 
 #endif /* _N96E_LEX_TYPES_H */

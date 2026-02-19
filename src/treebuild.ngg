@@ -33,9 +33,9 @@ fun nlg-get-rule gives (mstring, mstring, string) takes nh NlexHandle
 	var escaped bool
 	
 	while true
-		var ch / =nlex_next/[nh]
+		var chraw / =nlex_next/[nh]
 
-		if in ch [ c'\r', c'\n', EOF, c'\0' ]
+		if in chraw [ c'\r', c'\n', EOF, c'\0' ]
 			if gt =get-length\vspat 0
 				return nil, nil, NLEXERR_NO_ACT_GIVEN
 			;
@@ -43,6 +43,8 @@ fun nlg-get-rule gives (mstring, mstring, string) takes nh NlexHandle
 				return nil, nil, NLEXERR_SUCCESS
 			;
 		;
+
+		var ch / =unwrap-char/[chraw]
 
 		if eq ch c'['
 			if not escaped
@@ -62,12 +64,11 @@ fun nlg-get-rule gives (mstring, mstring, string) takes nh NlexHandle
 			break
 		;
 		elif and (eq ch c' ') (not in-list)
-			while eq =nlex_next/[nh] c' ';
+			while eq =nlex_next/[nh] (as int c' ');
 			break
 		;
 
-		// TODO assert this cast is safe (EOF is checked above)
-		=appendc\vspat/[=unwrap-char/[ch]]
+		=appendc\vspat/[ch]
 	;
 
 	=appendc\vsact/[=nlex-last/[nh]]
