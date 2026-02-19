@@ -50,7 +50,7 @@ echo '}' >> "$ocfile"
 
 rsync "$scriptdir"'/main-for-auto.c' "$mcfile"
 
-cc -o "$elffile" -g "$mcfile" "$ocfile" "$(dirname "$0")"/../src/read.o -I"$(dirname "$0")"/../src
+cc -o "$elffile" -g "$mcfile" "$ocfile" "$(dirname "$0")"/../src/read.o "$(dirname "$0")"/../src/types.o -I"$(dirname "$0")"/../src
 
 while IFS= read -r line; do
 echo "$line"
