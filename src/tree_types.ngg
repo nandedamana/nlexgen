@@ -23,13 +23,12 @@ union NanTreeNodeData
 
 class NanTreeNode
 	var id NanTreeNodeId;
+	var ch NlexCharacter;
 
-  var ch NlexCharacter;
-  
-  // Only if the node is a fastkw action node
-  var fastkw_pattern nullable mstring;
+	// Only if the node is a fastkw action node
+	var fastkw_pattern nullable mstring;
 
-  var data NanTreeNodeData;
+	var data NanTreeNodeData;
 
 	/* Points to the first node in the Kleene sub-expression (points to self
 	 * if only one node in the Kleene group.)
