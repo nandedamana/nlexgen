@@ -22,6 +22,8 @@ int main(int argc, char * argv[])
 	char * outpath_gv = NULL;
 	bool clopt_fastkw = false;
 	bool do_consume_callback = true;
+	char * function_header = NULL;
+	char * function_epilogue = NULL;
 	
 	// XXX Implemented and tested on 2023-04-07; no performance gain because:
 	// 1) The current implementation was already using nested ifs to reduce comparison
@@ -49,6 +51,18 @@ int main(int argc, char * argv[])
 			}
 			else if(0 == strcmp(argv[i], "--no-consume-callback")) {
 				do_consume_callback = false;
+			}
+			else if(0 == strcmp(argv[i], "--function-epilogue")) {
+				i++;
+				if(argc <= i)
+					nlex_die("No path given after --function-epilogue.");
+				function_epilogue = argv[i];
+			}
+			else if(0 == strcmp(argv[i], "--function-header")) {
+				i++;
+				if(argc <= i)
+					nlex_die("No path given after --function-header.");
+				function_header = argv[i];
 			}
 			else if(0 == strcmp(argv[i], "--gv")) {
 				i++;
@@ -124,6 +138,10 @@ int main(int argc, char * argv[])
 		nan_plot(&troot, fpo);
 
 		fclose(fpo);
+	}
+
+	if(function_header) {
+		fprintf(fpout, "%s\n{\n", function_header);
 	}
 
 	// Can't move out of the fun to global scope because only local
@@ -311,6 +329,13 @@ int main(int argc, char * argv[])
 				"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */\n"
 			"} /* endif last_accepted_state */\n");
 	fprintf(fpout, "} /* endif not end of input */ \n");
+
+	if(function_header) {
+		if(function_epilogue)
+			fprintf(fpout, "%s\n", function_epilogue);
+
+		fprintf(fpout, "}\n");
+	}
 	/* END Code Generation */
 
 	nlex_handle_destruct(nh);
