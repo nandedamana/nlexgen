@@ -5,7 +5,7 @@
  */
 
 #define PROGRAM_NAME "nlexgen"
-#define VERSION "0.2.2"
+#define VERSION "0.3.0"
 
 #include <memory.h>
 
