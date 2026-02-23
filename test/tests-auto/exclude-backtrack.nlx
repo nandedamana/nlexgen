@@ -1,0 +1,2 @@
+[^m]+   { printf("1:%s-", nlex_tokdup(nh, 0, 0)); }
+m[^\n]* { printf("2:%s-", nlex_tokdup(nh, 0, 0)); }
