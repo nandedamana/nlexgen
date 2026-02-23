@@ -315,6 +315,8 @@ int main(int argc, char * argv[])
 				// TODO rem ch_read_after_accept if it'll always be 0
 				"nh->curtoklen = lastmatchat - nh->curtokpos - ch_read_after_accept + 1;\n"
 				"assert(nh->curtoklen > 0);\n"
+				"assert(nh->curtokpos >= 0);\n"
+				"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */"
 				"switch(nh->last_accepted_state) {\n");
 	nan_tree_astates_to_code(&troot, do_consume_callback);
 	fprintf(fpout,
@@ -324,9 +326,6 @@ int main(int argc, char * argv[])
 		fprintf(fpout, "after_fastkw:\n");
 
 	fprintf(fpout,
-				"assert(nh->curtoklen > 0);\n"
-				"assert(nh->curtokpos >= 0);\n"
-				"nh->bufptr = nh->buf + nh->curtokpos + nh->curtoklen - 1; /* means backtracking if there was a longer partial match (resetting bufptr is needed in every case though) */\n"
 			"} /* endif last_accepted_state */\n");
 	fprintf(fpout, "} /* endif not end of input */ \n");
 
